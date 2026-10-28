@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -49,6 +50,16 @@ type Config struct {
 	// which is what makes impatient refreshes expensive.
 	CancelOnDisconnect bool
 	WorkTimeout        time.Duration
+
+	// PageCost is spent every time a page is built from the database.
+	PageCost PageCost
+
+	// MaxWorkers bounds the requests being processed at once, like a worker
+	// pool (PHP-FPM max_children, Apache MaxRequestWorkers). MaxQueue bounds
+	// the requests waiting for a worker; beyond that the server answers 503 at
+	// once, as a full listen backlog would. Zero means no limit.
+	MaxWorkers int
+	MaxQueue   int
 }
 
 // Server is an http.Handler for one design.
@@ -63,6 +74,8 @@ type Server struct {
 
 	reqHist   *metrics.Histogram
 	inflightG *metrics.Gauge
+	workers   chan struct{}
+	queued    atomic.Int64
 }
 
 // New builds a server. It panics on an unknown design.
@@ -79,6 +92,10 @@ func New(cfg Config) *Server {
 		cfg.XFetchBeta = 1
 	}
 	s := &Server{cfg: cfg, m: metrics.New("portal"), inflight: map[int64]int{}}
+	if cfg.MaxWorkers > 0 {
+		s.workers = make(chan struct{}, cfg.MaxWorkers)
+	}
+	s.m.GaugeFunc("queued", s.queued.Load)
 	s.reqHist = s.m.Histogram("request")
 	s.inflightG = s.m.Gauge("inflight")
 	if cfg.DB != nil {
@@ -147,6 +164,25 @@ func (s *Server) handleResult(w http.ResponseWriter, r *http.Request) {
 	}()
 	s.m.Counter("requests").Inc()
 
+	if s.workers != nil {
+		if q := s.queued.Add(1); s.cfg.MaxQueue > 0 && q > int64(s.cfg.MaxQueue) {
+			s.queued.Add(-1)
+			s.m.Counter("responses_503_queue_full").Inc()
+			writeJSON(w, http.StatusServiceUnavailable, bodyUnavail)
+			return
+		}
+		select {
+		case s.workers <- struct{}{}:
+			s.queued.Add(-1)
+			defer func() { <-s.workers }()
+		case <-r.Context().Done():
+			// The client left while waiting; a request that never started is dropped.
+			s.queued.Add(-1)
+			s.m.Counter("dropped_before_start").Inc()
+			return
+		}
+	}
+
 	roll, err := strconv.ParseInt(r.URL.Query().Get("roll"), 10, 64)
 	if err != nil || roll <= 0 {
 		s.m.Counter("responses_400").Inc()
@@ -207,6 +243,8 @@ func (s *Server) fromDB(ctx context.Context, roll int64) ([]byte, bool, error) {
 	if !ok {
 		return nil, false, nil
 	}
+	s.cfg.PageCost.Spend()
+	s.m.Counter("pages_built").Inc()
 	return dataset.JSON(rec), true, nil
 }
 

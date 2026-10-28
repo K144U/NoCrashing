@@ -1,0 +1,28 @@
+# Design C2: one pre-computed JSON file per roll number, served directly by
+# Nginx (the way a CDN origin would be). A sidecar creates the release flag
+# file at release time.
+services:
+  static:
+    image: nginx:1.27-alpine
+    environment:
+      NGINX_OFC_VALID: ${NGINX_OFC_VALID:-30s}
+    volumes:
+      - ../nginx/result.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - static:/data:ro
+    cpus: ${NGINX_CPUS:-2.0}
+    mem_limit: ${NGINX_MEM:-512m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  releaser:
+    image: resultbench:local
+    command: ["release", "-flag", "/data/released"]
+    environment:
+      RB_AT: ${RELEASE_AT_MS:-}
+    volumes:
+      - static:/data

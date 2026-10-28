@@ -270,7 +270,7 @@ func (g *Generator) user(ctx context.Context, id, roll int64, arrival time.Time)
 	}
 	_, valid := g.or.Cfg.Valid(roll)
 	patience := seconds(uniform(rng, us.PatienceS))
-	u := userRec{id: id, roll: roll, valid: valid, arrivalMs: g.relMs(arrival), admittedMs: -1, finalMs: -1,
+	u := userRec{id: id, roll: roll, valid: valid, arrivalMs: g.relMs(arrival), admittedMs: -1, finalMs: -1, firstTryMs: -1,
 		patienceMs: patience.Milliseconds()}
 	defer func() { g.rec.usrCh <- u }()
 
@@ -378,6 +378,9 @@ func (g *Generator) request(ctx context.Context, u *userRec, kind string, target
 		req.Header.Set(wroom.HeaderName, ticket)
 	}
 	sent := time.Now()
+	if u.firstTryMs < 0 && !sent.Before(g.release) {
+		u.firstTryMs = g.relMs(sent)
+	}
 	corrPublished := sc.Corrections.Enabled && !sent.Before(g.corrAt)
 	g.inflight.Add(1)
 	resp, err := g.client.Do(req)
@@ -530,7 +533,13 @@ func (g *Generator) summarize(started time.Time, gen GeneratorStats) Summary {
 		if u.gaveUp == "shutdown" {
 			s.UnfinishedUsers++
 		}
+		// Deadlines count from the student's first request after release:
+		// a student who arrived early only sees the result at their next
+		// reload, which is not the portal's doing.
 		startMs := max(u.arrivalMs, 0)
+		if u.firstTryMs >= 0 {
+			startMs = u.firstTryMs
+		}
 		if u.admittedMs >= 0 {
 			wait = append(wait, float32(u.admittedMs-startMs))
 		}

@@ -1,0 +1,24 @@
+# Design A: the application queries PostgreSQL on every request.
+services:
+  portal:
+    image: resultbench:local
+    command: ["portal"]
+    environment:
+      RB_DESIGN: db
+      RB_DSN: postgres://rb:rb@postgres:5432/rb
+      RB_DB_MAX_CONNS: ${DB_MAX_CONNS:-16}
+      RB_RELEASE_AT: ${RELEASE_AT_MS:-}
+      RB_MAX_WORKERS: ${MAX_WORKERS:-256}
+      RB_MAX_QUEUE: ${MAX_QUEUE:-4096}
+      RB_PAGE_COST: ${PAGE_COST:-5ms}
+      RB_CANCEL_ON_DISCONNECT: ${CANCEL_ON_DISCONNECT:-false}
+    cpus: ${PORTAL_CPUS:-1.0}
+    mem_limit: ${PORTAL_MEM:-512m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "rb", "fetch", "-timeout", "2s", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

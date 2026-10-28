@@ -1,0 +1,28 @@
+# A short scenario for smoke tests and trying things out (about 2 minutes).
+name: quick
+dataset: {seed: 42, n: 50000, roll_base: 2710000000, correction_per_mille: 10, num_schools: 500}
+surge:
+  shape: surge
+  peak_users_per_s: 100
+  pre_release_s: 15
+  pre_release_start_frac: 0.05
+  pre_release_end_frac: 0.2
+  rise_s: 2
+  decay_tau_s: 15
+  floor_frac: 0.05
+  post_release_s: 40
+keys: {dist: uniform, zipf_s: 1.1, typo_rate: 0.01}
+users:
+  patience_s: [3, 10]
+  retry_prob: 0.8
+  impatient_retry_prob: 0.9
+  retry_delay_s: [0.5, 2]
+  max_attempts: 10
+  prerelease_poll_s: [3, 8]
+  queue_manual_refresh_per_min: 1
+  repeat_view_prob: 0.1
+  repeat_after_s: [3, 10]
+  max_session_s: 300
+corrections: {enabled: false, at_s: 20}
+generator: {max_users: 100000, drain_s: 30}
+deadlines_s: [2, 5, 10]

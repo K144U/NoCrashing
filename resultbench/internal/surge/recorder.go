@@ -40,6 +40,7 @@ type userRec struct {
 	arrivalMs       int64 // relative to release
 	admittedMs      int64 // first response that was neither queued nor not-released; -1 if none
 	finalMs         int64 // when the user saw a final answer; -1 if never
+	firstTryMs      int64 // first request sent at or after release; -1 if none
 	final           string
 	requests        int
 	failures        int
@@ -99,7 +100,7 @@ func newRecorder(dir string, deadlines []float64) (*recorder, error) {
 	}
 	if r.usrF, r.usrGz, r.usrCSV, err = openCSV(filepath.Join(dir, "users.csv.gz"),
 		[]string{"user", "roll", "valid", "arrival_ms", "admitted_ms", "final_ms", "final", "requests", "failures",
-			"polls", "manual_refreshes", "tickets_lost", "gave_up", "patience_ms"}); err != nil {
+			"polls", "manual_refreshes", "tickets_lost", "gave_up", "patience_ms", "first_try_ms"}); err != nil {
 		return nil, err
 	}
 	go r.loop()
@@ -170,6 +171,7 @@ func (r *recorder) loop() {
 				strconv.FormatInt(u.arrivalMs, 10), strconv.FormatInt(u.admittedMs, 10), strconv.FormatInt(u.finalMs, 10),
 				u.final, strconv.Itoa(u.requests), strconv.Itoa(u.failures), strconv.Itoa(u.polls),
 				strconv.Itoa(u.manualRefreshes), strconv.Itoa(u.ticketsLost), u.gaveUp, strconv.FormatInt(u.patienceMs, 10),
+				strconv.FormatInt(u.firstTryMs, 10),
 			})
 			r.agg.Users = append(r.agg.Users, u)
 			r.sec(u.arrivalMs).arrivals++

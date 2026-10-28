@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: resultbench
+    folder: ResultBench
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

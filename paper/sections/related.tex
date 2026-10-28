@@ -1,0 +1,34 @@
+\section{Related Work}
+
+\textbf{Flash crowds.} Jung et al.\ characterised flash crowds and separated
+them from denial-of-service attacks~\cite{jung2002flash}; Wendell and Freedman
+measured four years of flash crowds in CoralCDN~\cite{wendell2011going}. These
+studies characterise unannounced crowds; a result release is a crowd whose
+time is known in advance, which changes what a portal can prepare.
+
+\textbf{Caching and pre-computation.} Challenger et al.\ cached dynamic pages
+for the 1998 Olympics web site~\cite{challenger1999scalable}, and Labrinidis
+and Roussopoulos compared serving web views virtually, materialised in the
+database, and materialised at the web server~\cite{labrinidis2000webview}.
+Cache stampedes and their defences, such as leases~\cite{nishtala2013memcache}
+and probabilistic early recomputation (XFetch)~\cite{vattani2015xfetch}, are
+well studied for keys shared by many readers.
+
+\textbf{Overload control.} SEDA~\cite{welsh2001seda}, front-end admission
+control for e-commerce sites~\cite{elnikety2004gatekeeper}, and more recent
+systems such as DAGOR~\cite{zhou2018dagor} and Breakwater~\cite{cho2020breakwater}
+shed or queue load inside or in front of servers. User-facing waiting rooms
+that issue tickets and positions are available as products~\cite{cloudflare2026wr,aws2026vwr};
+we found only vendor material about their behaviour.
+
+\textbf{Retries.} Retries are the most common mechanism that keeps systems in
+a metastable failed state after the trigger is gone~\cite{bronson2021metastable,huang2022metastable,beyer2016sre}.
+We measure the effect of human refreshes, not automated retries.
+
+\textbf{Portal load studies.} Recent studies of university academic portals
+compare a plain database design against Redis cache-aside under fixed
+concurrency~\cite{putranto2026redis,tofan2026cacheaside}. Our study adds
+pre-computed and waiting-room designs, an open-loop release-time surge with
+refreshing students~\cite{schroeder2006open}, correctness checking, and
+resource cost, and follows established guidance for reproducible performance
+evaluation~\cite{papadopoulos2019methodological,uta2020bigdata}.

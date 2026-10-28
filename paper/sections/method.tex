@@ -1,0 +1,54 @@
+\section{Methodology}
+\label{sec:method}
+
+\textbf{Testbed.} All experiments ran on one 4-core virtual machine with
+\SI{15}{GB} of memory, Docker~29 and Compose. The system under test was pinned
+to two cores and the load generator to the other two. Runs in which the
+generator used more than 90\% of its cores or ran out of local ports were
+discarded (none in the results reported here unless stated).
+
+\textbf{Data.} \num{200000} synthetic students with six subjects each,
+generated deterministically from a seed so that the expected answer for any
+roll number can be recomputed. 1\% of students receive a revised result
+(re-totalling) when corrections are published. No real student data was used.
+
+\textbf{Workload.} Students arrive as an open-loop Poisson
+process~\cite{schroeder2006open} whose rate ramps up during \SI{20}{s} before
+release (to 20\% of the peak), jumps to the peak within \SI{3}{s} of release,
+and decays exponentially with a time constant of \SI{30}{s} over a
+\SI{90}{s} window. This is a time-compressed version of a real result day, which
+decays over tens of minutes. Students who arrive early reload every
+5--\SI{15}{s} until release. Each student has a patience drawn from
+5--\SI{20}{s}; after an error the student refreshes with probability 0.8, after
+running out of patience with probability 0.9, after a pause of 1--\SI{5}{s},
+for at most 20 attempts. 10\% of students look again after seeing the result;
+1\% mistype their roll number. These behavioural parameters are assumptions;
+Section~\ref{sec:refresh} varies them. Roll numbers are sampled without
+replacement (every arriving student is a different student), or from a Zipf
+law ($s{=}1.2$) to model hot keys.
+
+\textbf{Load levels.} We first calibrated design~A: the highest constant
+arrival rate at which 99\% of students received a correct result within
+\SI{2}{s}, found by stepping and bisection, was \CapA\ students/s. Peak
+arrival rates are expressed as multiples of this capacity (1$\times$ to
+10$\times$). For reference, the JEE Advanced 2016 incident corresponds to
+about 5$\times$~\cite{pagalguy2016jee}.
+
+\textbf{Oracle and metrics.} Every response is classified as correct, stale
+(the old version after corrections), wrong, missing (404 for an existing
+student), soft failure (HTTP 200 without a result), gate or queue response, or
+an availability failure (5xx, timeout, connection error). The main outcome is
+the share of students who receive a correct result within 2, 5 and
+\SI{10}{s} of their first request after release, and at all
+(\emph{served}). Cost is the CPU-seconds used by all containers per
+\num{1000} students served. Amplification is requests sent per student.
+
+\textbf{Repetitions.} Each configuration was run 3 times with different seeds
+in randomised order; we report medians with 95\% percentile-bootstrap
+intervals.
+
+\textbf{Generator validation.} At a constant \num{150} requests/s against
+design~A, our generator with evenly spaced arrivals and k6's constant-arrival-rate
+executor~\cite{k6docs} measured a median latency of \SI{5.9}{ms} and
+\SI{5.9}{ms}, and a 99th percentile of 11.7--\SI{12.1}{ms} and
+12.7--\SI{14.0}{ms}, respectively (two runs each).

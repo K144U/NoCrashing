@@ -1,0 +1,9 @@
+# A two-minute check that every design works: one run each at 2x with the
+# quick scenario. Run after `calibrate --design a --scenario bench/scenarios/quick.yaml`.
+name: smoke
+scenario: bench/scenarios/quick.yaml
+capacity_from: a
+reps: 1
+runs:
+  - designs: [a, m, b0, b1, b2, b3, c1, c2, d-a]
+    multiples: [2]

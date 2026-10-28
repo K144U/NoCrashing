@@ -1,0 +1,41 @@
+# RQ4: is the result correct under load? Corrections published 120 s after
+# release; early release before pre-computation finishes; Nginx file cache.
+name: correctness
+scenario: bench/scenarios/core.yaml
+capacity_from: a
+reps: 5
+set:
+  corrections.enabled: true
+  corrections.at_s: 120
+runs:
+  # Overload and correction batch, every design, with invalidation.
+  - designs: [a, m, b0, c1, c2, d-a]
+    multiples: [1, 5]
+  # Cache-aside without invalidation: stale until the TTL expires.
+  - designs: [b0]
+    multiples: [1]
+    options: {invalidate: false}
+    variants:
+      - label: ttl-10m
+        env: {CACHE_TTL: 10m}
+      - label: ttl-1m
+        env: {CACHE_TTL: 1m}
+  # Static files: the Nginx open_file_cache can serve replaced files.
+  - designs: [c2]
+    multiples: [1]
+    variants:
+      - label: ofc-30s
+        env: {NGINX_OFC_VALID: 30s}
+      - label: ofc-1s
+        env: {NGINX_OFC_VALID: 1s}
+  # Early release: only part of the results are published before release.
+  - designs: [c1, c2]
+    multiples: [1]
+    set: {corrections.enabled: false}
+    variants:
+      - label: early-50
+        options: {fraction: 0.5}
+      - label: early-90
+        options: {fraction: 0.9}
+      - label: early-99
+        options: {fraction: 0.99}

@@ -1,0 +1,13 @@
+# RQ2: where does each design fail, and at what cost? (plan section 7.5, "Core")
+# No refreshes or repeat views, so the designs are compared on raw capacity.
+name: core
+scenario: bench/scenarios/core.yaml
+capacity_from: a
+reps: 5
+set:
+  users.retry_prob: 0
+  users.impatient_retry_prob: 0
+  users.repeat_view_prob: 0
+runs:
+  - designs: [a, m, b0, c1, c2]
+    multiples: [0.5, 1, 2, 5, 10]

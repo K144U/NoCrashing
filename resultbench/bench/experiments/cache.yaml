@@ -1,0 +1,16 @@
+# RQ5: miss ratio or stampede? Cache-aside variants under uniform and skewed
+# keys. B3 starts with a warm cache; B0-B2 start cold.
+name: cache
+scenario: bench/scenarios/core.yaml
+capacity_from: a
+reps: 5
+set:
+  users.repeat_view_prob: 0.2
+runs:
+  - designs: [b0, b1, b2, b3]
+    multiples: [1, 2, 5]
+    variants:
+      - label: uniform
+        set: {keys.dist: uniform}
+      - label: zipf
+        set: {keys.dist: zipf, keys.zipf_s: 1.2}

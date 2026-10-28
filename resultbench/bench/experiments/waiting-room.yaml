@@ -1,0 +1,30 @@
+# RQ3: does a waiting room help, and is it fair? Load above capacity, students
+# refresh. Compare each backend with and without a waiting room, and the four
+# waiting-room configurations (policy x ticket mode).
+name: waiting-room
+scenario: bench/scenarios/core.yaml
+capacity_from: a
+reps: 5
+set:
+  users.queue_manual_refresh_per_min: 1
+runs:
+  - designs: [a, c1]
+    multiples: [2, 5, 10]
+  - designs: [d-a, d-c1]
+    multiples: [2, 5, 10]
+    variants:
+      - label: fifo-token
+        env: {WR_POLICY: fifo, WR_MODE: token}
+      - label: fifo-naive
+        env: {WR_POLICY: fifo, WR_MODE: naive}
+      - label: random-token
+        env: {WR_POLICY: random, WR_MODE: token}
+      - label: random-naive
+        env: {WR_POLICY: random, WR_MODE: naive}
+  # H3a: is a waiting room better than doubling A's resources? Needs 6+ cores:
+  # run with RB_LOADGEN_CPUSET=4,5 (the runner refuses overlapping cores).
+  - designs: [a]
+    multiples: [2, 5, 10]
+    variants:
+      - label: double-budget
+        env: {PORTAL_CPUS: "2.0", PG_CPUS: "2.0", SUT_CPUSET: "0,1,2,3"}

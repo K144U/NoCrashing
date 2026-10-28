@@ -11,7 +11,10 @@ the [research plan](../../result-portal-research-plan.md).
 The read path of every design gets **2 CPUs and the same memory limits**, on the
 same two cores (`SUT_CPUSET`, default `0,1`). The load generator runs on other
 cores (`RB_LOADGEN_CPUSET`, default `2,3`); the runner refuses to start if they
-overlap. The split per design is in [`bench/designs.yaml`](../bench/designs.yaml):
+overlap. The paper runs used `RB_SUT_CPUSET=2,3` (both hardware threads of one
+physical core) and `RB_LOADGEN_CPUSET=4-15` on an 8-core, 16-thread machine,
+leaving core 0 to the operating system; the values are recorded in
+`runs/paper-cpuset.env`. The split per design is in [`bench/designs.yaml`](../bench/designs.yaml):
 
 | Design | Allocation (CPUs) |
 |---|---|
@@ -65,6 +68,16 @@ generator reports dropped arrivals when its own
 limits are reached and marks a run as saturated if its CPU use exceeds 90%
 of its cores or it runs out of local ports or file descriptors; such runs
 are excluded from analysis.
+
+The generator container uses local ports 1024–65535 and reuses ports in
+TIME_WAIT (`net.ipv4.ip_local_port_range`, `net.ipv4.tcp_tw_reuse`, set in
+`loadgen_cmd` in `bench/rb.py`). With Linux's default range (32768–60999),
+all six paper waiting-room runs of D-A with token tickets at 5× ran out of
+ports while draining (625 to 13,587 failed connections each) and were marked
+saturated. The setting was added after `paper-core` and `paper-wr` had run;
+`paper-correct`, `paper-cache` and `paper-refresh` used it, and the six
+saturated runs were deleted and rerun with it. It cannot change a run that does
+not run out of ports, so runs with and without it are comparable.
 
 ### 2.2 Surge shape
 

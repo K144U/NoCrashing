@@ -1,0 +1,20 @@
+# Cross-check of the load generator against k6 (docs/experiments.md): design A
+# at a constant 150 students/s for 30 s, evenly spaced arrivals, no refreshes,
+# no typos, so both tools send the same requests.
+name: k6check
+dataset: {seed: 42, n: 200000, roll_base: 2710000000, correction_per_mille: 10, num_schools: 2000}
+surge:
+  shape: constant
+  peak_users_per_s: 150
+  pre_release_s: 0
+  post_release_s: 30
+  arrivals: even
+keys: {dist: uniform, zipf_s: 1.2, typo_rate: 0}
+users:
+  patience_s: [10, 10]
+  retry_prob: 0
+  impatient_retry_prob: 0
+  repeat_view_prob: 0
+corrections: {enabled: false, at_s: 30}
+generator: {max_users: 300000, drain_s: 15}
+deadlines_s: [2, 5, 10]

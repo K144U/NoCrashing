@@ -1,0 +1,22 @@
+# RQ6: how much do refreshes amplify load, and does the system recover once
+# arrivals fall below capacity (metastability)? The surge decays quickly
+# (tau 30 s) so recovery after the spike is visible in timeseries.csv.
+name: refresh
+scenario: bench/scenarios/core.yaml
+capacity_from: a
+reps: 5
+set:
+  surge.decay_tau_s: 30
+  surge.post_release_s: 300
+runs:
+  - designs: [a, b0, c1, d-a]
+    multiples: [2, 5]
+    variants:
+      - label: no-refresh
+        set: {users.retry_prob: 0, users.impatient_retry_prob: 0}
+      - label: calm
+        set: {users.retry_prob: 0.5, users.impatient_retry_prob: 0.5, users.patience_s: [10, 30]}
+      - label: default
+        set: {}
+      - label: impatient
+        set: {users.retry_prob: 0.9, users.impatient_retry_prob: 0.95, users.patience_s: [3, 8], users.retry_delay_s: [0.5, 2]}

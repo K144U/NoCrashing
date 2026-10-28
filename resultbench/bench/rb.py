@@ -73,7 +73,21 @@ def load_designs() -> tuple[dict, dict]:
             d = base
         d.setdefault("databases", ["postgres"])
         designs[name] = d
-    return designs, raw["defaults"]
+    defaults = raw["defaults"]
+    defaults["sut_cpuset"] = os.environ.get("RB_SUT_CPUSET", defaults["sut_cpuset"])
+    defaults["loadgen_cpuset"] = os.environ.get("RB_LOADGEN_CPUSET", defaults["loadgen_cpuset"])
+    return designs, defaults
+
+
+def cpuset(spec: str) -> set[int]:
+    out: set[int] = set()
+    for part in spec.split(","):
+        if "-" in part:
+            a, b = part.split("-")
+            out.update(range(int(a), int(b) + 1))
+        elif part.strip():
+            out.add(int(part))
+    return out
 
 
 # ----------------------------------------------------------- docker utils ---
@@ -296,6 +310,65 @@ def git_commit() -> str:
 
 # ------------------------------------------------------------- commands ---
 
+class FaultInjector(threading.Thread):
+    """Injects one fault during a run (plan section 7.4).
+
+    kill:    stop a service at at_s (seconds after release) and start it again
+             after duration_s, e.g. {kind: kill, service: redis, at_s: 10, duration_s: 20}
+    slow_db: cut PostgreSQL's CPU limit by `factor` for duration_s,
+             e.g. {kind: slow_db, at_s: 10, duration_s: 60, factor: 10}
+    """
+
+    def __init__(self, spec: dict | None, release_ms: int, run_dir: Path):
+        super().__init__(daemon=True)
+        self.spec = spec or {}
+        self.release_ms = release_ms
+        self.events: list[dict] = []
+        self.stop_evt = threading.Event()
+
+    def _wait_until(self, t_s: float) -> bool:
+        delay = self.release_ms / 1000 + t_s - time.time()
+        return not self.stop_evt.wait(max(0.0, delay))
+
+    def _note(self, what: str) -> None:
+        self.events.append({"t_ms": int(time.time() * 1000) - self.release_ms, "event": what})
+        log(f"fault: {what}")
+
+    def _container(self, service: str) -> str:
+        return f"{PROJECT}-{service}-1"
+
+    def run(self):
+        if not self.spec:
+            return
+        kind, at, dur = self.spec["kind"], float(self.spec.get("at_s", 10)), float(self.spec.get("duration_s", 30))
+        if not self._wait_until(at):
+            return
+        if kind == "kill":
+            c = self._container(self.spec["service"])
+            sh(["docker", "kill", c], check=False, capture=True)
+            self._note(f"killed {c}")
+            if self._wait_until(at + dur):
+                sh(["docker", "start", c], check=False, capture=True)
+                self._note(f"restarted {c}")
+        elif kind == "slow_db":
+            c = self._container(self.spec.get("service", "postgres"))
+            cpus = sh(["docker", "inspect", "-f", "{{.HostConfig.NanoCpus}}", c], capture=True).stdout.strip()
+            orig = int(cpus) / 1e9 if cpus.isdigit() and int(cpus) > 0 else 1.0
+            slow = orig / float(self.spec.get("factor", 10))
+            sh(["docker", "update", "--cpus", f"{slow:.3f}", c], check=False, capture=True)
+            self._note(f"{c} cpus {orig} -> {slow:.3f}")
+            if self._wait_until(at + dur):
+                sh(["docker", "update", "--cpus", f"{orig:.3f}", c], check=False, capture=True)
+                self._note(f"{c} cpus back to {orig}")
+        else:
+            raise ValueError(f"unknown fault kind {kind}")
+
+    def finish(self) -> dict:
+        self.stop_evt.set()
+        self.join(timeout=30)
+        return {"spec": self.spec, "events": self.events}
+
+
 def cmd_build(args) -> None:
     sh(["docker", "build", "-t", IMAGE, str(ROOT)])
 
@@ -385,6 +458,9 @@ def run_one(design_name: str, sc: dict, run_dir: Path, opts: dict) -> dict:
             env["WR_ADMIT_RATE"] = f"{wr['admit_fraction'] * cap:.1f}"
         sc.setdefault("waiting_room", {})["mode"] = env.get("WR_MODE", "token")
 
+    if cpuset(env["SUT_CPUSET"]) & cpuset(defaults["loadgen_cpuset"]):
+        raise SystemExit(f"system-under-test cores {env['SUT_CPUSET']} overlap load generator cores "
+                         f"{defaults['loadgen_cpuset']}; set RB_LOADGEN_CPUSET to other cores")
     compose = Compose(design["files"], env)
     meta = {"design": design_name, "description": design["description"], "env": env, "options": opts,
             "commit": git_commit(), "host": platform.node(), "cpus": os.cpu_count(),
@@ -433,11 +509,14 @@ def run_one(design_name: str, sc: dict, run_dir: Path, opts: dict) -> dict:
 
         sampler = ResourceSampler(run_dir, release_ms)
         sampler.start()
+        fault = FaultInjector(opts.get("fault"), release_ms, run_dir)
+        fault.start()
         rel = run_dir.relative_to(runs_dir())
         log(f"running load: {design_name}, peak {sc.get('surge', {}).get('peak_users_per_s')}/s -> {rel}")
         sh(loadgen_cmd(defaults["loadgen_cpuset"]) + ["surge", "-scenario", f"/runs/{rel}/scenario.yaml",
             "-out", f"/runs/{rel}/load"])
         meta["resources"] = sampler.stop()
+        meta["fault"] = fault.finish()
         collect_stats(compose, design, run_dir)
         (run_dir / "compose.log").write_text(compose.run("logs", "--no-color", check=False, capture=True).stdout)
         meta["containers"] = container_states(compose)

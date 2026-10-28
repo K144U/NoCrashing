@@ -1,0 +1,16 @@
+# Waiting rooms with a longer run: in paper-wr, 52-58% of D-A's students were
+# still queued when the run stopped 45 s after the surge. At 80% of A's
+# capacity (about 179 admissions/s) the queue needs about 3.5 minutes to
+# empty, so here the run continues for 240 s after the surge. A alone is not
+# repeated: none of its students were still waiting at the end of paper-wr.
+name: paper-wr-long
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+set: {generator.drain_s: 240}
+runs:
+  - designs: [d-a]
+    multiples: [5]
+    variants:
+      - {label: fifo-token, env: {WR_POLICY: fifo, WR_MODE: token}}
+      - {label: fifo-naive, env: {WR_POLICY: fifo, WR_MODE: naive}}

@@ -66,6 +66,14 @@ student served, A needed 12.5 times C2's CPU at 1$\times$ and 57.8 times at
 \num{200000} results took a median of 6.9--\SI{7.0}{s} for C1 and
 9.4--\SI{9.8}{s} for C2 across load levels.
 
+\textbf{Page cost.} The \SI{5}{ms} page-building cost is an assumption, so we
+repeated A and B0 at the same load as 2$\times$ with \SI{2}{ms} and \SI{0}{ms}.
+Both then served at least 99.8\% of students within \SI{5}{s}: the page cost
+decides how much load a database-backed portal can take. The cost order did
+not change. Per student served, A used 2.6 (\SI{0}{ms}) to 9.7 (\SI{2}{ms})
+times the CPU of C2, and B0 always used more than A (1.12 against 0.73
+CPU-seconds per \num{1000} at \SI{0}{ms}, 3.05 against 2.73 at \SI{2}{ms}).
+
 \textbf{Answer to RQ1.} Designs that build each page when it is requested fail
 at twice design~A's capacity (A and M) or already at its capacity (B0), and
 neither mirrors nor a cold cache helps. Pre-computing results before release
@@ -117,12 +125,23 @@ than \SI{0.1}{s} at the 95th percentile, and the CPU used per \num{1000}
 students rose from 0.4 to 0.8 CPU-seconds, because every request also passes
 through the waiting room.
 
-\textbf{Answer to RQ2.} At 5$\times$ our waiting room did not serve more
-students within the run; it turned failures into long waits. It kept arrival
-order only with first come, first served and tokens. Tokens protect a student
-who presses refresh, but without a limit on admitted students they also let
-impatient students overload the backend. In front of a backend that can take
-the load, a waiting room adds cost and delay for no gain.
+\textbf{Longer runs.} Because so many students were still queued, we ran D-A
+with first come, first served again with \SI{240}{s} more for the queue to
+empty (a \SI{330}{s} run). With naive tickets it then served 98.3\% of
+students, against 43.3\% for A alone, whose unserved students had all given
+up; but the median student waited \SI{121}{s} to be admitted (95th percentile
+\SI{282}{s}). In our model, queued students wait up to 10 minutes; real
+students may leave sooner. With tokens it served only 74.5\%: admitted
+students who ran out of patience refreshed straight at A, which received 3.21
+requests per student instead of 1.07.
+
+\textbf{Answer to RQ2.} At 5$\times$ our waiting room served almost every
+student in the end, against fewer than half without it, but only after waits
+of minutes. It kept arrival order only with first come, first served and
+tokens. Tokens protect a student who presses refresh, but without a limit on
+admitted students they also let impatient students overload the backend, and
+then it served fewer students. In front of a backend that can take the load, a
+waiting room adds cost and delay for no gain.
 
 \subsection{RQ3: Correctness}
 \label{sec:rq3}

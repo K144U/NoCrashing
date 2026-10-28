@@ -14,7 +14,7 @@ student asks for a different result, almost every cache miss was the first
 request for its key, so stampede defences changed nothing, while filling the
 cache before release served everyone. Refreshing students almost doubled the
 requests per student, and impatient ones kept an unprotected portal
-overloaded. A virtual waiting room at five times the load turned failures into
-long waits rather than serving more students. We make ResultBench available so
-that boards can test their own designs.
+overloaded. A virtual waiting room at five times the load served 98.3\% of
+students instead of 43.3\%, but only after waits of minutes. ResultBench is
+open source (MIT licence) so that boards can test their own designs.
 \end{abstract}

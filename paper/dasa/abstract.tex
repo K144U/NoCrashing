@@ -1,24 +1,22 @@
 \begin{abstract}
 On result day, lakhs of students try to open an examination board's website at
-the same moment, and these websites often fail. Boards need evidence to decide how to build them.
-We built
-ResultBench, a testbed that runs eleven designs of a result website on the
-same two processor threads, replays a result-day surge of students who wait and
-press refresh, and checks every answer. On one
-machine, a website that builds every page from a database served every
-student within five seconds at the load it was sized for, but only 30.8
-percent at twice that load; splitting it into mirror sites or adding an empty
-cache did not help. Preparing every result in advance served every student
-at ten times that load and used 12.5 to
-57.8 times less processor time per student, after less than ten seconds of
-preparation. No design returned a wrong result, and old results after a
-correction lasted more than a fraction of a second only where cached copies
-were not updated. Because each
-student asks for a different result, measures that protect a cache from many
-identical requests changed nothing, while filling the cache before release
-served everyone. Impatient students who kept refreshing kept an unprotected
-website overloaded. A virtual waiting room in front of that website served
-98.3 percent of students instead of 43.3 percent, but only after waits of
-minutes. We turn these measurements into a decision
-guide for examination boards and release the testbed as open source.
+the same moment, and these websites often fail. Boards need evidence to decide
+how to build them. We present ResultBench, an open-source testbed that compares
+designs of a result website under identical conditions. It runs eleven designs
+on the same two processor threads: a website that builds every page from a
+database, two mirror copies of it, four variants of a cache in front of the
+database, results prepared in advance in an in-memory store or as one file per
+student, and virtual waiting rooms in front of these. A
+load generator replays a result-day surge of synthetic students who arrive
+before and after the announced time, wait a limited time for an answer and
+press refresh when it is slow. Every answer is checked against the true
+result, so wrong, outdated and missing results are counted alongside speed and
+processor use, and every configuration is repeated three times. On one
+machine, the database design served only 30.8 percent of students within five
+seconds at twice the load it was sized for, while results prepared in advance
+served every student at ten times that load, using less than a twelfth of the
+processor time per student. No design returned wrong results, a cache helped
+only when filled before release, and a waiting room could serve almost every
+student, but only after waits of minutes. We turn these measurements into a
+decision guide for examination boards.
 \end{abstract}

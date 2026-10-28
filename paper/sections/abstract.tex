@@ -1,1 +1,20 @@
-% placeholder
+\begin{abstract}
+Examination boards publish results at an announced time, and their websites
+often fail under the rush of students. We built ResultBench, a testbed that
+runs eleven designs of a result portal under the same two-CPU budget, replays
+a result-day surge of students who wait and refresh, and checks every answer
+against ground truth. On one machine, a database-backed portal served every
+student within \SI{5}{s} at its calibrated capacity but only 30.8\% at twice
+that load, and neither mirror sites nor an empty cache helped. Pre-computing
+results into Redis or static files served every student at ten times the load
+with 12.5--57.8 times less CPU per student, after less than \SI{10}{s} of
+preparation. No design returned wrong results; stale results after
+corrections came only from cached copies that were not updated. Because every
+student asks for a different result, almost every cache miss was the first
+request for its key, so stampede defences changed nothing, while filling the
+cache before release served everyone. Refreshing students almost doubled the
+requests per student, and impatient ones kept an unprotected portal
+overloaded. A virtual waiting room at five times the load turned failures into
+long waits rather than serving more students. We make ResultBench available so
+that boards can test their own designs.
+\end{abstract}

@@ -1,0 +1,25 @@
+\begin{table*}[t]
+\caption{Waiting rooms at 5$\times$ load with refreshing students (median of 3 runs). Wait: from first request after release until admitted. $\tau$: Kendall's rank correlation between arrival and admission order (1 = first-come-first-served). Refresh penalty: median extra wait of students who pressed refresh.}
+\label{tab:wr}
+\centering
+\footnotesize
+\begin{tabular}{@{}llrrrrrrrrr@{}}
+\toprule
+Backend & Waiting room & \multicolumn{3}{c}{Served correctly (\%)} & Still waiting & Wait p50 & Wait p95 & $\tau$ (early arrivals) & Refresh penalty & CPU s / 1000 \\
+\cmidrule(lr){3-5}
+ & & 5\,s & 10\,s & at all & at end (\%) & (s) & (s) & & (s) & \\
+\midrule
+A & none & 3.5 & 6.1 & 43.3 & 0.0 & 0.2 & 17.5 & 0.09 & -- & 8.3 \\
+A & fifo, token & 2.0 & 4.1 & 36.8 & 52.2 & 40.6 & 102 & 0.79 & 20.1 & 11.6 \\
+A & fifo, naive & 1.9 & 3.7 & 41.9 & 58.1 & 59.5 & 105 & 0.60 & 36.8 & 8.2 \\
+A & random, token & 2.3 & 4.4 & 34.2 & 52.5 & 38.2 & 104 & 0.01 & 17.9 & 12.6 \\
+A & random, naive & 1.9 & 3.8 & 41.8 & 58.1 & 59.8 & 105 & -0.01 & 37.2 & 8.3 \\
+\midrule
+C1 & none & 100.0 & 100.0 & 100.0 & 0.0 & 0.0 & 0.0 & 0.25 & -- & 0.4 \\
+C1 & fifo, token & 99.7 & 100.0 & 100.0 & 0.0 & 0.0 & 0.1 & 0.16 & 0.0 & 0.8 \\
+C1 & fifo, naive & 99.7 & 100.0 & 100.0 & 0.0 & 0.0 & 0.0 & 0.15 & 0.0 & 0.8 \\
+C1 & random, token & 99.7 & 100.0 & 100.0 & 0.0 & 0.0 & 0.1 & 0.13 & 0.0 & 0.8 \\
+C1 & random, naive & 99.6 & 100.0 & 100.0 & 0.0 & 0.0 & 0.1 & 0.13 & 0.0 & 0.8 \\
+\bottomrule
+\end{tabular}
+\end{table*}

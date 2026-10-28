@@ -1,23 +1,62 @@
 \section{Methodology}
 \label{sec:method}
 
-\textbf{Testbed.} All experiments ran on one 4-core virtual machine with
-\SI{15}{GB} of memory, Docker~29 and Compose. The system under test was pinned
-to two cores and the load generator to the other two. Runs in which the
+\begin{figure}[t]
+\centering
+\input{diagrams/testbed.tex}
+\caption{The testbed. The generator plays the students, the oracle checks every
+response against ground truth, and a sampler records the CPU and memory of
+every container.}
+\label{fig:testbed}
+\end{figure}
+
+\textbf{Testbed.} Fig.~\ref{fig:testbed} shows the testbed. All experiments
+ran on one desktop computer with an AMD
+Ryzen~7 5800X processor (8 cores, 16 hardware threads) and \SI{32}{GB} of
+memory, running Windows~11. Containers ran inside the WSL\,2 virtual machine
+(Ubuntu~26.04, Linux~6.18, 16 virtual CPUs, \SI{15.6}{GiB} of memory) under
+Docker Engine~29.9 and Docker Compose~5.6. The system under test was pinned to
+the two hardware threads of one core and the load generator to the twelve
+hardware threads of six other cores; the remaining core was left to the
+operating system and Docker. Pinning applies to the virtual machine's CPUs,
+which the hypervisor maps onto physical cores, so isolation is close but not
+exact. Runs in which the
 generator used more than 90\% of its cores or ran out of local ports were
-discarded (none in the results reported here unless stated).
+discarded. This happened to six waiting-room runs (D-A with tokens at
+5$\times$), where the generator ran out of local ports; we widened the
+generator's port range and ran them again. A wider range cannot change a run
+that does not run out of ports, and no other run did.
 
 \textbf{Data.} \num{200000} synthetic students with six subjects each,
 generated deterministically from a seed so that the expected answer for any
 roll number can be recomputed. 1\% of students receive a revised result
 (re-totalling) when corrections are published. No real student data was used.
 
-\textbf{Workload.} Students arrive as an open-loop Poisson
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/workload.pdf}
+\caption{New students per second in one run of design~A at 1$\times$. Every
+experiment uses this shape, scaled to its peak.}
+\label{fig:workload}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\input{diagrams/student.tex}
+\caption{How each simulated student behaves. All numbers are assumptions;
+Section~\ref{sec:refresh} varies them.}
+\label{fig:student}
+\end{figure}
+
+\textbf{Workload.} Figs.~\ref{fig:workload} and~\ref{fig:student} show the
+workload. Students arrive as an open-loop Poisson
 process~\cite{schroeder2006open} whose rate ramps up during \SI{20}{s} before
 release (to 20\% of the peak), jumps to the peak within \SI{3}{s} of release,
 and decays exponentially with a time constant of \SI{30}{s} over a
-\SI{90}{s} window. This is a time-compressed version of a real result day, which
-decays over tens of minutes. Students who arrive early reload every
+\SI{90}{s} window. Real result days stay busy far longer: in Maharashtra in
+2021, one school still had more than half of its students without results at
+10~pm~\cite{ht2021ssc}. We compress the surge to keep each run short. Students
+who arrive early reload every
 5--\SI{15}{s} until release. Each student has a patience drawn from
 5--\SI{20}{s}; after an error the student refreshes with probability 0.8, after
 running out of patience with probability 0.9, after a pause of 1--\SI{5}{s},
@@ -47,8 +86,11 @@ the share of students who receive a correct result within 2, 5 and
 in randomised order; we report medians with 95\% percentile-bootstrap
 intervals.
 
-\textbf{Generator validation.} At a constant \num{150} requests/s against
-design~A, our generator with evenly spaced arrivals and k6's constant-arrival-rate
-executor~\cite{k6docs} measured a median latency of \SI{5.9}{ms} and
-\SI{5.9}{ms}, and a 99th percentile of 11.7--\SI{12.1}{ms} and
-12.7--\SI{14.0}{ms}, respectively (two runs each).
+\textbf{Generator validation.} We checked our generator against k6, a
+widely used load-testing tool. At a constant \num{150} requests/s against
+design~A, our generator with evenly spaced arrivals and k6's
+constant-arrival-rate executor~\cite{k6docs} measured a median latency of
+5.3--\SI{5.5}{ms} and \SI{5.4}{ms}, and a 99th percentile of
+6.6--\SI{7.6}{ms} and 6.2--\SI{6.3}{ms}, respectively (two runs each, about
+\num{4500} requests per run, none failed). Our generator saw a slightly longer
+tail. The experiments themselves use Poisson arrivals, which are burstier.

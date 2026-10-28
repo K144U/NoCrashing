@@ -19,6 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
+import yaml  # noqa: E402
 
 from analysis import collect, stats  # noqa: E402
 
@@ -111,8 +112,9 @@ def core() -> None:
         for ax, m in zip(axes, ["success_5s", "cpu_s_per_1k_served"]):
             y = g[m].to_numpy(float)
             err = np.vstack([y - g[m + "_lo"].to_numpy(float), g[m + "_hi"].to_numpy(float) - y])
+            # C1 and C2 coincide at 100%; dash C1 so both stay visible.
             ax.errorbar(g["multiple"], y, yerr=np.abs(np.nan_to_num(err)), marker="o", ms=3, capsize=2,
-                        color=COLORS[d], label=NAMES[d])
+                        color=COLORS[d], label=NAMES[d], ls="--" if d == "c1" else "-")
     axes[0].set_ylabel("students served correctly\nwithin 5 s")
     axes[0].set_ylim(-0.03, 1.03)
     axes[1].set_ylabel("CPU-seconds per 1000\nstudents served")
@@ -123,7 +125,7 @@ def core() -> None:
         ax.set_xticklabels(["1x", "2x", "5x", "10x"])
         ax.set_xlabel("peak arrival rate (multiple of A's capacity)")
         ax.grid(alpha=0.3)
-    axes[0].legend(ncol=5, loc="lower left", frameon=False)
+    axes[0].legend(ncol=2, loc="center right", frameon=False)
     fig.tight_layout()
     fig.savefig(FIG / "core.pdf")
     plt.close(fig)
@@ -150,15 +152,93 @@ def core() -> None:
     write("tab_core.tex", "\n".join(lines) + "\n")
 
 
+# --------------------------------------------------------------- workload ---
+def workload() -> None:
+    """New students per second in one real run: the surge shape every experiment uses."""
+    runs = sorted((RUNS / "paper-core").glob("a-x1-*-r1"))
+    if not runs:
+        return
+    ts = pd.read_csv(runs[0] / "load" / "timeseries.csv")
+    fig, ax = plt.subplots(figsize=(COL_W, 1.6))
+    ax.bar(ts["t_s"], ts["arrivals"], width=1.0, color="#7f8c8d", label="new students per second")
+    ax.axvline(0, color="#c0392b", lw=1)
+    peak = ts["arrivals"].max()
+    ax.annotate("release", xy=(0, peak), xytext=(9, peak * 0.97), color="#c0392b", fontsize=7)
+    ax.annotate("early\nstudents", xy=(-8, ts.loc[ts["t_s"] == -8, "arrivals"].mean()),
+                xytext=(-20, peak * 0.6), fontsize=6, arrowprops={"arrowstyle": "->", "lw": 0.6})
+    ax.annotate("decay, time constant 30 s", xy=(30, ts.loc[ts["t_s"] == 30, "arrivals"].mean()),
+                xytext=(35, peak * 0.6), fontsize=6, arrowprops={"arrowstyle": "->", "lw": 0.6})
+    ax.set_xlabel("seconds after release")
+    ax.set_ylabel("new students / s")
+    ax.set_xlim(ts["t_s"].min() - 1, 92)
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(FIG / "workload.pdf")
+    plt.close(fig)
+    write("workload_run.txt", f"{runs[0].name}\n")
+
+
+# --------------------------------------------------------------- k6 check ---
+def k6_check() -> None:
+    """Latency of design A at a constant 150 requests/s, measured by our generator and by k6."""
+    d = RUNS / "k6check"
+    if not d.exists():
+        return
+    rows = []
+    for run in sorted(d.glob("rb-even-r*")):
+        s = json.loads((run / "load" / "summary.json").read_text())
+        lat = s["latency_all_ms"]
+        rows.append({"tool": "resultbench", "run": run.name, "requests": lat["n"], "p50_ms": lat["p50"],
+                     "p95_ms": lat["p95"], "p99_ms": lat["p99"], "failed": s["requests"] - s["requests_by_outcome"].get("correct", 0),
+                     "saturated": s["generator"]["saturated"]})
+    for f in sorted(d.glob("k6-r*.json")):
+        m = json.loads(f.read_text())["metrics"]
+        dur = m["http_req_duration"]
+        rows.append({"tool": "k6", "run": f.stem, "requests": m["http_reqs"]["count"], "p50_ms": dur["med"],
+                     "p95_ms": dur["p(95)"], "p99_ms": dur["p(99)"],
+                     "failed": round(m.get("http_req_failed", {}).get("value", 0) * m["http_reqs"]["count"]),
+                     "saturated": False})
+    pd.DataFrame(rows).to_csv(GEN / "k6_check.csv", index=False)
+
+
+# ------------------------------------------------------------- release lag ---
+def release_lag() -> None:
+    """Students told "not released" after the announced time, and how many late results that explains."""
+    d = RUNS / "paper-core"
+    if not d.exists():
+        return
+    rows = []
+    for run in sorted(p for p in d.iterdir() if (p / "load" / "summary.json").exists()):
+        u = pd.read_csv(run / "load" / "users.csv.gz")
+        q = pd.read_csv(run / "load" / "requests.csv.gz")
+        post = q[(q["t_ms"] >= 0) & (q["status"] == 425)]
+        late = u[(u["final"] == "correct") & (u["final_ms"] - u["first_try_ms"] > 5000)]
+        rows.append({"run": run.name, "design": json.loads((run / "meta.json").read_text())["design"],
+                     "users": len(u), "not_released_after_release": len(post),
+                     "last_not_released_ms": int(post["t_ms"].max()) if len(post) else 0,
+                     "late_5s": len(late), "late_5s_after_not_released": int(late["user"].isin(post["user"]).sum())})
+    df = pd.DataFrame(rows)
+    df.to_csv(GEN / "release_lag_runs.csv", index=False)
+    s = df.groupby("design").agg(runs=("run", "count"), users=("users", "sum"),
+                                 not_released_after_release=("not_released_after_release", "sum"),
+                                 last_not_released_ms=("last_not_released_ms", "max"), late_5s=("late_5s", "sum"),
+                                 late_5s_after_not_released=("late_5s_after_not_released", "sum"))
+    s.to_csv(GEN / "release_lag_summary.csv")
+
+
 # ------------------------------------------------------------ waiting room ---
 def waiting_room() -> None:
     df = load("paper-wr")
     if df.empty:
         return
+    # Students still active when the run stopped (mostly still queued): the run
+    # length, not the design, decides whether they would have been served.
+    df["unfinished_share"] = df["unfinished_users"] / df["users"]
     s = agg(df, ["design", "label"], ["success_5s", "success_10s", "served_ok", "wait_p50_ms", "wait_p95_ms",
                                       "kendall_tau", "kendall_tau_prerelease", "refresh_penalty_ms",
                                       "backend_amplification", "amplification", "cpu_s_per_1k_served", "wr_abandoned",
-                                      "time_to_result_p50_ms", "time_to_result_p95_ms"])
+                                      "time_to_result_p50_ms", "time_to_result_p95_ms", "unfinished_share",
+                                      "users"])
     s.to_csv(GEN / "wr_summary.csv", index=False)
     order = [("a", ""), ("d-a", "fifo-token"), ("d-a", "fifo-naive"), ("d-a", "random-token"), ("d-a", "random-naive"),
              ("c1", ""), ("d-c1", "fifo-token"), ("d-c1", "fifo-naive"), ("d-c1", "random-token"), ("d-c1", "random-naive")]
@@ -166,9 +246,9 @@ def waiting_room() -> None:
              r"Wait: from first request after release until admitted. $\tau$: Kendall's rank correlation between arrival and admission order "
              r"(1 = first-come-first-served). Refresh penalty: median extra wait of students who pressed refresh.}",
              r"\label{tab:wr}", r"\centering", r"\footnotesize",
-             r"\begin{tabular}{@{}llrrrrrrrr@{}}", r"\toprule",
-             r"Backend & Waiting room & \multicolumn{3}{c}{Served correctly (\%)} & Wait p50 & Wait p95 & $\tau$ (early arrivals) & Refresh penalty & CPU s / 1000 \\",
-             r"\cmidrule(lr){3-5}", r" & & 5\,s & 10\,s & at all & (s) & (s) & & (s) & \\", r"\midrule"]
+             r"\begin{tabular}{@{}llrrrrrrrrr@{}}", r"\toprule",
+             r"Backend & Waiting room & \multicolumn{3}{c}{Served correctly (\%)} & Still waiting & Wait p50 & Wait p95 & $\tau$ (early arrivals) & Refresh penalty & CPU s / 1000 \\",
+             r"\cmidrule(lr){3-5}", r" & & 5\,s & 10\,s & at all & at end (\%) & (s) & (s) & & (s) & \\", r"\midrule"]
     for d, lab in order:
         r = s[(s["design"] == d) & (s["label"] == lab)]
         if r.empty:
@@ -178,7 +258,8 @@ def waiting_room() -> None:
         wr = "none" if lab == "" else lab.replace("-", ", ")
         tau = r.get("kendall_tau_prerelease")
         lines.append(f"{backend} & {wr} & {fmt(r['success_5s'], pct=True)} & {fmt(r['success_10s'], pct=True)} & "
-                     f"{fmt(r['served_ok'], pct=True)} & {fmt(r['wait_p50_ms'] / 1000, digits=1)} & "
+                     f"{fmt(r['served_ok'], pct=True)} & {fmt(r['unfinished_share'], pct=True)} & "
+                     f"{fmt(r['wait_p50_ms'] / 1000, digits=1)} & "
                      f"{fmt(r['wait_p95_ms'] / 1000, digits=1)} & {fmt(tau)} & "
                      f"{fmt(r['refresh_penalty_ms'] / 1000, digits=1)} & {fmt(r['cpu_s_per_1k_served'], digits=1)} \\\\")
         if (d, lab) == ("d-a", "random-naive"):
@@ -198,21 +279,103 @@ def correctness() -> None:
     s = agg(df, ["design", "label"], ["stale", "wrong", "missing", "soft_failures", "staleness_window_s", "served_ok",
                                       "requests"])
     s.to_csv(GEN / "correct_summary.csv", index=False)
-    order = [("a", "", "corrections"), ("b0", "invalidate", "corrections, entries deleted"),
-             ("b0", "no-invalidate", "corrections, no invalidation (TTL 10 min)"), ("c1", "", "corrections, entries rewritten"),
-             ("c2", "ofc-30s", "corrections, Nginx file cache 30 s"), ("c2", "ofc-1s", "corrections, Nginx file cache 1 s"),
-             ("c1", "early-90", "release with 90\\% pre-computed"), ("c2", "early-90", "release with 90\\% pre-computed")]
-    lines = [r"\begin{table}[t]", r"\caption{Correctness at 1$\times$ load, median of 3 runs. Corrections for 1\% of students are published 30\,s after release.}",
-             r"\label{tab:correct}", r"\centering", r"\footnotesize", r"\setlength{\tabcolsep}{2.5pt}",
-             r"\begin{tabular}{@{}lp{3.1cm}rrrr@{}}", r"\toprule",
-             r"Design & Condition & Stale & Stale for (s) & Missing & Wrong \\", r"\midrule"]
-    for d, lab, desc in order:
+    # tab_correct.tex is written by corrections_exposure(), which counts stale
+    # answers against the answers that could have been stale.
+
+
+_M64 = (1 << 64) - 1
+
+
+def _splitmix64(x: int) -> int:
+    x = (x + 0x9E3779B97F4A7C15) & _M64
+    x = ((x ^ (x >> 30)) * 0xBF58476D1CE4E5B9) & _M64
+    x = ((x ^ (x >> 27)) * 0x94D049BB133111EB) & _M64
+    return x ^ (x >> 31)
+
+
+def corrected_rolls(ds: dict) -> set[int]:
+    """Roll numbers whose result is revised, as internal/dataset.Config.IsCorrected picks them."""
+    out = set()
+    for i in range(int(ds["n"])):
+        s = 0x5EED
+        for p in (int(ds["seed"]), 2, i):  # streamCorrection = 2
+            s = _splitmix64(s ^ p)
+        if _splitmix64(s) % 1000 < int(ds["correction_per_mille"]):
+            out.add(int(ds["roll_base"]) + i)
+    return out
+
+
+def corrections_exposure() -> None:
+    """Requests that corrected students made after the correction time, and how many got the old result."""
+    d = RUNS / "paper-correct"
+    if not d.exists():
+        return
+    rows, rolls_cache = [], {}
+    for run in sorted(p for p in d.iterdir() if (p / "load" / "summary.json").exists()):
+        meta = json.loads((run / "meta.json").read_text())
+        sc = yaml.safe_load((run / "scenario.yaml").read_text())
+        q = pd.read_csv(run / "load" / "requests.csv.gz")
+        row = {"run": run.name, "design": meta["design"], "label": meta["options"].get("label", "")}
+        if sc.get("corrections", {}).get("enabled"):
+            key = json.dumps(sc["dataset"], sort_keys=True)
+            if key not in rolls_cache:
+                rolls_cache[key] = corrected_rolls(sc["dataset"])
+            at_ms = float(sc["corrections"]["at_s"]) * 1000
+            after = q[(q["t_ms"] >= at_ms) & q["roll"].isin(rolls_cache[key])]
+            answered = after[after["outcome"].isin(["correct", "stale", "wrong"])]
+            stale = answered[answered["outcome"] == "stale"]
+            rep = json.loads(next(run.glob("corrections-*.json")).read_text())
+            row.update({"corrected_students": len(rolls_cache[key]),
+                        "answers_after_correction": len(answered),
+                        "students_answered_after_correction": answered["roll"].nunique(),
+                        "stale": len(stale),
+                        "last_stale_after_correction_s": (stale["t_ms"].max() - at_ms) / 1000 if len(stale) else 0.0,
+                        "correction_done_after_s": (rep["finished_unix_ms"] - meta["release_at_ms"] - at_ms) / 1000})
+        mat = meta.get("materialize") or {}
+        if "after_release" in mat:
+            row.update({"precomputed_at_release": mat["before_release"]["written"],
+                        "written_after_release": mat["after_release"]["written"],
+                        "after_release_s": mat["after_release"]["seconds"],
+                        "missing": int((q["outcome"] == "missing").sum())})
+        rows.append(row)
+    df = pd.DataFrame(rows)
+    df.to_csv(GEN / "correct_exposure_runs.csv", index=False)
+    agg_cols = {c: (c, "sum") for c in ["answers_after_correction", "students_answered_after_correction", "stale",
+                                        "missing"] if c in df}
+    agg_cols.update({c: (c, "max") for c in ["last_stale_after_correction_s", "after_release_s",
+                                             "correction_done_after_s"] if c in df})
+    if "written_after_release" in df:
+        agg_cols["written_after_release"] = ("written_after_release", "max")
+    s = df.groupby(["design", "label"], dropna=False).agg(runs=("run", "count"), **agg_cols)
+    s.to_csv(GEN / "correct_exposure_summary.csv")
+    s = s.reset_index()
+    s["label"] = s["label"].fillna("")
+
+    def row(d, lab):
         r = s[(s["design"] == d) & (s["label"] == lab)]
-        if r.empty:
-            continue
-        r = r.iloc[0]
-        lines.append(f"{NAMES[d]} & {desc} & {fmt(r['stale'], digits=0)} & {fmt(r['staleness_window_s'], digits=1)} & "
-                     f"{fmt(r['missing'], digits=0)} & {fmt(r['wrong'], digits=0)} \\\\")
+        return None if r.empty else r.iloc[0]
+
+    lines = [r"\begin{table}[t]",
+             r"\caption{Correctness at 1$\times$ load, totals over 3 runs. Top: corrections for 1\% of students "
+             r"published 30\,s after release; \emph{answers} are those given to corrected students after that time. "
+             r"Bottom: release with only 90\% of results pre-computed.}",
+             r"\label{tab:correct}", r"\centering", r"\footnotesize", r"\setlength{\tabcolsep}{3pt}",
+             r"\begin{tabular}{@{}lp{2.9cm}rrr@{}}", r"\toprule",
+             r"Design & Condition & Answers & Stale & Last stale (s) \\", r"\midrule"]
+    for d, lab, desc in [("a", "", "database read every time"), ("b0", "invalidate", "cache entries deleted"),
+                         ("b0", "no-invalidate", "no invalidation (TTL 10 min)"), ("c1", "", "Redis entries rewritten"),
+                         ("c2", "ofc-1s", "files rewritten, Nginx cache 1\\,s"),
+                         ("c2", "ofc-30s", "files rewritten, Nginx cache 30\\,s")]:
+        r = row(d, lab)
+        if r is not None:
+            last = f"{r['last_stale_after_correction_s']:.2f}" if r["stale"] > 0 else "--"
+            lines.append(f"{NAMES[d]} & {desc} & {r['answers_after_correction']:.0f} & {r['stale']:.0f} & {last} \\\\")
+    lines += [r"\midrule", r"Design & & Written late & Took (s) & Missing \\", r"\midrule"]
+    for d in ["c1", "c2"]:
+        r = row(d, "early-90")
+        if r is not None:
+            lines.append(f"{NAMES[d]} & release with 90\\% ready & {r['written_after_release']:,.0f} & "
+                         f"{r['after_release_s']:.2f} & {r['missing']:.0f} \\\\")
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
     write("tab_correct.tex", "\n".join(lines) + "\n")
 
@@ -224,7 +387,8 @@ def cache() -> None:
         return
     miss = ["portal_cache_miss_first_time_key", "portal_cache_miss_repeat_key", "portal_cache_miss_concurrent_duplicate"]
     s = agg(df, ["design", "label"], miss + ["success_5s", "served_ok", "db_queries_per_user", "portal_coalesced",
-                                             "portal_cache_hits", "users", "cpu_s_per_1k_served"])
+                                             "portal_cache_hits", "users", "cpu_s_per_1k_served",
+                                             "portal_xfetch_early_refresh", "req_correct_notfound"])
     s.to_csv(GEN / "cache_summary.csv", index=False)
     fig, axes = plt.subplots(1, 2, figsize=(COL_W * 2, 2.0))
     designs = ["b0", "b1", "b2", "b3"]
@@ -238,15 +402,21 @@ def cache() -> None:
                 r = s[(s["design"] == d) & (s["label"] == lab)]
                 users = r["users"].iloc[0] if len(r) else np.nan
                 vals.append(r[col].iloc[0] / users if len(r) and users else 0)
-            ax.bar(x, vals, bottom=bottom, color=color, label=name, width=0.6)
+            ax.bar(x, vals, bottom=bottom, color=color, label=name if lab == "uniform" else None, width=0.6)
             bottom += np.array(vals)
+        # Label each bar with what the misses meant for students.
+        for xi, d in zip(x, designs):
+            r = s[(s["design"] == d) & (s["label"] == lab)]
+            if len(r):
+                ax.text(xi, bottom[xi], f"{100 * r['success_5s'].iloc[0]:.0f}%", ha="center", va="bottom", fontsize=6)
         ax.set_xticks(x)
         ax.set_xticklabels([NAMES[d] for d in designs])
         ax.set_title("uniform keys (each student once)" if lab == "uniform" else "Zipf keys (s = 1.2)")
         ax.set_ylabel("cache misses per student")
+        ax.set_ylim(0, bottom.max() * 1.18)
         ax.grid(axis="y", alpha=0.3)
-    axes[0].legend(frameon=False, loc="upper right")
-    fig.tight_layout()
+    fig.legend(frameon=False, loc="upper center", ncol=3, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(rect=(0, 0, 1, 0.9))
     fig.savefig(FIG / "cache.pdf")
     plt.close(fig)
 
@@ -285,8 +455,12 @@ def refresh() -> None:
 
 def main() -> None:
     core()
+    k6_check()
+    workload()
+    release_lag()
     waiting_room()
     correctness()
+    corrections_exposure()
     cache()
     refresh()
     ca, cc = cap("a"), cap("c1")

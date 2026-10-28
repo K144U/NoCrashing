@@ -82,7 +82,16 @@ and the same load from ResultBench (`shape: constant`, `peak_users_per_s: 150`,
 | k6 constant-arrival-rate | 5.9 / 6.0 ms | 12.7 / 14.0 ms |
 | ResultBench, Poisson arrivals | 6.3 ms | 36.0 ms |
 
-Repeat this on the thesis machine and report it.
+`bench/k6-check.sh` repeats this on the paper's machine (scenario
+`bench/scenarios/k6check.yaml`: design A, 200,000 students, 150 requests/s,
+30 s, no refreshes, two runs each); `paper/make_figures.py` writes the results
+to `paper/generated/k6_check.csv`. On the paper's machine (Ryzen 7 5800X,
+WSL2, same CPU split as the paper runs):
+
+| Generator | p50 | p95 | p99 |
+|---|---|---|---|
+| ResultBench, even arrivals | 5.3 / 5.5 ms | 5.7 / 5.9 ms | 6.6 / 7.6 ms |
+| k6 constant-arrival-rate | 5.4 / 5.4 ms | 5.8 / 5.8 ms | 6.2 / 6.3 ms |
 
 ## Capacity model
 

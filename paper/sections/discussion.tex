@@ -1,1 +1,45 @@
-% placeholder
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Advice for examination boards}
+
+Our results point to a short list of practical steps. Each is backed by the
+measurements in Section~\ref{sec:results}; the numbers come from one machine
+and should be read as relative, not absolute (Section~\ref{sec:threats}).
+
+\textbf{Pre-compute every result before release.} Building each page on
+request failed at twice the calibrated load; serving pre-computed results from
+Redis or as static files served ten times that load with no loss, at
+12.5--57.8 times less CPU per student (Section~\ref{sec:rq1}). Preparing
+\num{200000} results took less than \SI{10}{s}.
+
+\textbf{Do not count on mirrors or a cold cache.} Splitting the same hardware
+into mirror sites did not help, and a cache that starts empty is worse than no
+cache, because every student asks for a different result
+(Sections~\ref{sec:rq1} and~\ref{sec:rq4}). If a cache is used, fill it before
+release; stampede defences such as request coalescing do not help here.
+
+\textbf{Release only when every result is written.} Students who ask before
+their result exists are told it does not exist (Section~\ref{sec:rq3}).
+
+\textbf{Update every copy when a result is corrected.} Stale results came only
+from copies that were not updated: a cache without invalidation and the web
+server's file cache (Section~\ref{sec:rq3}). Delete or rewrite cached copies
+and keep file caches short.
+
+\textbf{Plan for refreshes.} Students who press refresh multiply the load, and
+impatient ones kept an unprotected portal down for the rest of our run
+(Section~\ref{sec:refresh}).
+
+\textbf{Use a waiting room for order, not for capacity.} A waiting room cannot
+serve students faster than the backend behind it. At 5$\times$ ours did not
+serve more students within the run; it turned failures into waits of a minute
+or more, and in front of a fast backend it only added cost
+(Section~\ref{sec:rq2}). A board that uses one should keep each student's place
+across refreshes (tokens), admit in arrival order if fairness matters, and also
+limit how much each admitted student may send to the backend; otherwise
+impatient students overload it anyway (Sections~\ref{sec:rq2}
+and~\ref{sec:refresh}). With pre-computed results, the backend took the whole
+surge and no waiting room was needed.
+
+\input{sections/threats.tex}

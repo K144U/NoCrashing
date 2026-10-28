@@ -49,7 +49,13 @@ NOFILE = os.environ.get("RB_LOADGEN_NOFILE", "")
 
 
 def loadgen_cmd(cpuset: str) -> list[str]:
+    # Every student is a separate client, and requests cancelled after a timeout
+    # leave their port in TIME_WAIT. With Linux's default range (32768-60999) the
+    # generator ran out of ports in waiting-room runs at 5x, so widen the range and
+    # let new connections reuse TIME_WAIT ports. Neither changes a run that does not
+    # run out of ports.
     cmd = ["docker", "run", "--rm", "--name", "rb-loadgen", "--network", "rb-net", "--cpuset-cpus", cpuset,
+           "--sysctl", "net.ipv4.ip_local_port_range=1024 65535", "--sysctl", "net.ipv4.tcp_tw_reuse=1",
            "-v", f"{runs_dir()}:/runs"]
     if NOFILE:
         cmd += ["--ulimit", f"nofile={NOFILE}:{NOFILE}"]

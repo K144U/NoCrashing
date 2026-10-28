@@ -1,7 +1,10 @@
 # Result-in-a-box server. Results are pre-computed files; nothing on the read
 # path can run out of database connections.
 
-open_file_cache max=200000 inactive=120s;
+# Each cached entry keeps a file descriptor open. Keep max well below the
+# worker's open-file limit: with a larger cache, Nginx runs out of
+# descriptors under load and answers 404 for files that exist.
+open_file_cache max=4096 inactive=60s;
 # After a correction is published, Nginx may serve the previous file for up
 # to this long (measured in the ResultBench correctness experiment).
 open_file_cache_valid ${OFC_VALID};

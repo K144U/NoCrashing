@@ -4,7 +4,10 @@
 # is written to a new inode and renamed into place, so Nginx can keep serving
 # the old version until the cache entry is revalidated. This is a real
 # staleness source that the correction experiment measures.
-open_file_cache max=200000 inactive=120s;
+# Each cached entry keeps a file descriptor open. Keep max well below the
+# worker's open-file limit: with a larger cache, Nginx runs out of
+# descriptors under load and answers 404 for files that exist.
+open_file_cache max=4096 inactive=60s;
 open_file_cache_valid ${NGINX_OFC_VALID};
 
 map $arg_roll $shard {

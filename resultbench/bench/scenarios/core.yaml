@@ -1,0 +1,50 @@
+# Core result-day scenario (plan section 7.2). Times are compressed: a real
+# decay lasts 30-60 minutes; here it is a few minutes so a full grid fits in
+# the schedule. Every user-behaviour value is an assumption to be varied in
+# the refresh block and, where possible, replaced with field-study values.
+name: core
+
+dataset:
+  seed: 42
+  n: 1000000
+  roll_base: 2710000000
+  correction_per_mille: 10
+  num_schools: 5000
+
+surge:
+  shape: surge
+  peak_users_per_s: 100        # replaced by the runner: multiple x capacity of design A
+  pre_release_s: 60            # students arrive early and reload the page
+  pre_release_start_frac: 0.02
+  pre_release_end_frac: 0.2
+  rise_s: 5                    # the jump at release
+  decay_tau_s: 90
+  floor_frac: 0.02
+  post_release_s: 300
+
+keys:
+  dist: uniform                # each arriving student is a different student
+  zipf_s: 1.1
+  typo_rate: 0.01
+
+users:
+  patience_s: [5, 20]
+  retry_prob: 0.8
+  impatient_retry_prob: 0.9
+  retry_delay_s: [1, 5]
+  max_attempts: 20
+  prerelease_poll_s: [10, 30]
+  queue_manual_refresh_per_min: 0.5
+  repeat_view_prob: 0.1
+  repeat_after_s: [20, 60]
+  max_session_s: 1200
+
+corrections:
+  enabled: false
+  at_s: 120
+
+generator:
+  max_users: 300000
+  drain_s: 90
+
+deadlines_s: [2, 5, 10]

@@ -1,0 +1,17 @@
+# Robustness (plan section 7.4): kill the cache at peak; slow the database
+# 10x for 60 s. Recovery time is read from timeseries.csv.
+name: faults
+scenario: bench/scenarios/core.yaml
+capacity_from: a
+reps: 5
+runs:
+  - designs: [b0, c1, d-c1]
+    multiples: [2]
+    variants:
+      - label: kill-redis
+        options: {fault: {kind: kill, service: redis, at_s: 10, duration_s: 20}}
+  - designs: [a, b0]
+    multiples: [1]
+    variants:
+      - label: slow-db
+        options: {fault: {kind: slow_db, at_s: 10, duration_s: 60, factor: 10}}

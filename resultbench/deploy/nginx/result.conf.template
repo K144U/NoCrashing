@@ -1,0 +1,47 @@
+# Design C2: serve /result?roll=<digits> from /data/results/<roll without its last 3 digits>/<roll>.json.
+#
+# open_file_cache keeps file handles for ${NGINX_OFC_VALID}. A corrected file
+# is written to a new inode and renamed into place, so Nginx can keep serving
+# the old version until the cache entry is revalidated. This is a real
+# staleness source that the correction experiment measures.
+# Each cached entry keeps a file descriptor open. Keep max well below the
+# worker's open-file limit: with a larger cache, Nginx runs out of
+# descriptors under load and answers 404 for files that exist.
+open_file_cache max=4096 inactive=60s;
+open_file_cache_valid ${NGINX_OFC_VALID};
+
+map $arg_roll $shard {
+    "~^(?<s>[0-9]+)[0-9]{3}$" $s;
+    default "";
+}
+
+server {
+    listen 8080 reuseport backlog=4096;
+    root /data;
+
+    location = /result {
+        default_type application/json;
+        add_header Cache-Control "no-store" always;
+        if (!-f /data/released) {
+            return 425 '{"status":"not_released"}';
+        }
+        if ($shard = "") {
+            return 404 '{"error":"roll number not found"}';
+        }
+        try_files /results/$shard/$arg_roll.json =404;
+    }
+
+    error_page 404 = @notfound;
+    location @notfound {
+        default_type application/json;
+        return 404 '{"error":"roll number not found"}';
+    }
+
+    location = /healthz {
+        return 200 "ok\n";
+    }
+
+    location = /nginx_status {
+        stub_status;
+    }
+}

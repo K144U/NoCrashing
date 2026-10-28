@@ -1,0 +1,48 @@
+# Shared services for every design. The runner (bench/rb.py) combines this
+# file with one or more design files and sets the resource budget through
+# environment variables taken from bench/designs.yaml.
+name: rb
+
+networks:
+  default:
+    name: rb-net
+
+volumes:
+  pgdata:
+  pgdata-m2:
+  static:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rb
+      POSTGRES_PASSWORD: rb
+      POSTGRES_DB: rb
+    command: >
+      postgres -c max_connections=200 -c shared_buffers=${PG_SHARED_BUFFERS:-256MB}
+      -c effective_cache_size=768MB -c work_mem=8MB -c synchronous_commit=off
+      -c max_wal_size=2GB
+    cpus: ${PG_CPUS:-1.0}
+    mem_limit: ${PG_MEM:-1g}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    shm_size: 256mb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rb -d rb"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # One-off jobs: dbload, materialize, correct, fetch. Not started by "up".
+  tools:
+    image: resultbench:local
+    profiles: [tools]
+    environment:
+      RB_DSN: postgres://rb:rb@postgres:5432/rb
+      RB_REDIS: redis:6379
+      RB_DIR: /data/results
+    volumes:
+      - static:/data
+      - ${RUNS_DIR:-../../runs}:/runs

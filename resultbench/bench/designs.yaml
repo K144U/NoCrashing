@@ -1,0 +1,97 @@
+# Every design under test, its compose files, entry points and resource
+# budget. The budget for the read path is 2 CPUs in total for every design
+# (plan section 7.5: same limits for every design). PostgreSQL in the
+# pre-computed designs is the back office: it gets a small share, is idle
+# during the run, and its CPU use is still measured and reported.
+#
+# env values are passed to docker compose; see deploy/compose/*.yml.
+
+defaults:
+  sut_cpuset: "0,1"       # cores for the system under test
+  loadgen_cpuset: "2,3"   # cores for the load generator
+  lead_s: 15              # time between services starting and pre-release traffic
+
+designs:
+  a:
+    description: "A: database-backed, query PostgreSQL per request"
+    files: [common.yml, a.yml]
+    services: [postgres, portal]
+    targets: [http://portal:8080]
+    env: {PORTAL_CPUS: "1.0", PG_CPUS: "1.0"}
+
+  m:
+    description: "M: two mirrors of A with separate databases (status quo)"
+    files: [common.yml, m.yml]
+    services: [postgres, postgres-m2, portal-m1, portal-m2]
+    databases: [postgres, postgres-m2]
+    targets: [http://portal-m1:8080, http://portal-m2:8080]
+    env: {PORTAL_CPUS: "0.5", PG_CPUS: "0.5", PG2_CPUS: "0.5"}
+
+  b0:
+    description: "B0: Redis cache-aside"
+    files: [common.yml, b.yml]
+    services: [postgres, redis, portal]
+    targets: [http://portal:8080]
+    env: {PORTAL_CPUS: "0.75", PG_CPUS: "0.75", REDIS_CPUS: "0.5"}
+    corrections_target: cache
+
+  b1:
+    description: "B1: cache-aside with request coalescing"
+    extends: b0
+    env: {COALESCE: "true"}
+
+  b2:
+    description: "B2: cache-aside with XFetch and TTL jitter"
+    extends: b0
+    env: {XFETCH: "true", TTL_JITTER: "0.1"}
+
+  b3:
+    description: "B3: cache-aside, cache pre-warmed before release"
+    extends: b0
+    prepare: {target: cache}
+
+  c1:
+    description: "C1: pre-computed results in Redis, no database on the read path"
+    files: [common.yml, c1.yml]
+    services: [postgres, redis, portal]
+    targets: [http://portal:8080]
+    env: {PORTAL_CPUS: "1.0", REDIS_CPUS: "1.0", PG_CPUS: "0.25"}
+    prepare: {target: kv}
+    corrections_target: kv
+
+  c2:
+    description: "C2: pre-computed static JSON files served by Nginx"
+    files: [common.yml, c2.yml]
+    services: [postgres, static, releaser]
+    targets: [http://static:8080]
+    env: {NGINX_CPUS: "2.0", PG_CPUS: "0.25"}
+    prepare: {target: files}
+    corrections_target: files
+
+  d-a:
+    description: "D-A: waiting room in front of A"
+    files: [common.yml, a.yml, wr.yml]
+    services: [postgres, portal, wr]
+    targets: [http://wr:8080]
+    env: {WR_CPUS: "0.25", PORTAL_CPUS: "0.875", PG_CPUS: "0.875", WR_BACKEND: "http://portal:8080"}
+    waiting_room: {admit_from: a, admit_fraction: 0.8}
+
+  d-c1:
+    description: "D-C1: waiting room in front of C1"
+    files: [common.yml, c1.yml, wr.yml]
+    services: [postgres, redis, portal, wr]
+    targets: [http://wr:8080]
+    env: {WR_CPUS: "0.25", PORTAL_CPUS: "0.875", REDIS_CPUS: "0.875", PG_CPUS: "0.25", WR_BACKEND: "http://portal:8080"}
+    prepare: {target: kv}
+    corrections_target: kv
+    waiting_room: {admit_from: c1, admit_fraction: 0.8}
+
+  d-c2:
+    description: "D-C2: waiting room in front of C2"
+    files: [common.yml, c2.yml, wr.yml]
+    services: [postgres, static, releaser, wr]
+    targets: [http://wr:8080]
+    env: {WR_CPUS: "0.25", NGINX_CPUS: "1.75", PG_CPUS: "0.25", WR_BACKEND: "http://static:8080"}
+    prepare: {target: files}
+    corrections_target: files
+    waiting_room: {admit_from: c2, admit_fraction: 0.8}

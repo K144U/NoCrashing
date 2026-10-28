@@ -1,0 +1,9 @@
+/vendor/
+/runs/
+/out*/
+/calibration/
+*.test
+__pycache__/
+.venv/
+*.pyc
+/results/

@@ -1,0 +1,52 @@
+\section{Introduction}
+
+When an Indian examination board declares results, lakhs of students open the
+result website within the same few minutes. The release time is announced in
+advance, almost every request is a look-up of one roll number, and the data
+does not change while students read it. It is about as simple as a web
+workload can be. Yet result portals keep failing on result day. The chairman
+of JEE Advanced 2016 described the portal receiving about \num{10000} requests
+per second against a server that could hold \num{2000}~\cite{pagalguy2016jee};
+on Maharashtra SSC result day in 2021 schools reported that at least half of
+their students could not see results until evening, and the state's education
+minister apologised~\cite{ht2021ssc}. The problem is not Indian alone: Kenya's
+examination council reported up to \num{300000} hits per second on its results
+portal~\cite{standard2025knec}, and in 2025 WAEC in Nigeria withdrew its result
+checker over \emph{wrong} results rather than slow ones~\cite{icir2025waec}.
+
+The engineering ingredients that could prevent these failures are well
+known: caching dynamic pages and pre-generating them~\cite{challenger1999scalable,labrinidis2000webview},
+protecting caches against stampedes~\cite{vattani2015xfetch,nishtala2013memcache},
+admission control under overload~\cite{welsh2001seda,elnikety2004gatekeeper},
+and the danger of retries that keep an overloaded system down~\cite{bronson2021metastable,huang2022metastable}.
+Commercial ``virtual waiting rooms'' are sold for exactly this kind of
+event~\cite{cloudflare2026wr,aws2026vwr}. What is missing is a measured,
+like-for-like comparison of these options for this workload. The closest
+recent studies compare a database-backed and a Redis cache-aside design for a
+university portal under fixed concurrency~\cite{putranto2026redis,tofan2026cacheaside};
+they do not evaluate pre-computed serving or waiting rooms, do not model a
+release-time surge or students who refresh, and do not check that the
+answers returned are correct. We found no peer-reviewed evaluation of
+user-facing waiting rooms at all.
+
+This paper asks four questions about portals that publish read-only results at
+a pre-announced time:
+\begin{itemize}
+\item \textbf{RQ1 (architecture):} Under the same hardware budget, how far does each common design scale, and at what resource cost?
+\item \textbf{RQ2 (waiting rooms):} Does a waiting room improve students' outcomes, and is it fair when students refresh?
+\item \textbf{RQ3 (correctness):} Do designs return wrong, missing or stale results under load, after corrections, or when release precedes pre-computation?
+\item \textbf{RQ4 (caches and refreshes):} Is cache-aside's cold-start weakness a stampede, and how much do student refreshes amplify load?
+\end{itemize}
+
+Our contributions are:
+(1)~\textbf{ResultBench}, an open, reproducible testbed with eleven portal
+designs under one resource budget, an open-loop load generator with a
+parameterised model of how students refresh, and an oracle that checks every
+response against ground truth;
+(2)~a controlled comparison of database-backed, multi-mirror, cache-aside,
+pre-computed key-value and pre-computed static designs;
+(3)~to our knowledge, the first controlled evaluation of virtual waiting rooms,
+including queue order and ticket handling;
+(4)~measurements of correctness failures that only appear on result day;
+and (5)~a decomposition of cache-aside misses that shows why the usual
+stampede defences do little for per-student keys.

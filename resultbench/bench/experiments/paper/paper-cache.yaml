@@ -1,0 +1,11 @@
+# RQ5: miss ratio vs stampede in cache-aside variants.
+name: paper-cache
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+runs:
+  - designs: [b0, b1, b2, b3]
+    multiples: [2]
+    variants:
+      - {label: uniform, set: {keys.dist: uniform}}
+      - {label: zipf, set: {keys.dist: zipf, keys.zipf_s: 1.2}}

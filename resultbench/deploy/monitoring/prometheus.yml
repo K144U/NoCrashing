@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 1s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # Targets that are not part of the running design are simply reported down.
+  - job_name: portal
+    static_configs:
+      - targets: ["portal:8080", "portal-m1:8080", "portal-m2:8080"]
+  - job_name: waitingroom
+    static_configs:
+      - targets: ["wr:8080"]

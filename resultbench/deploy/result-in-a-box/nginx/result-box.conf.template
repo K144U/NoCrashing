@@ -1,0 +1,68 @@
+# Result-in-a-box server. Results are pre-computed files; nothing on the read
+# path can run out of database connections.
+
+# Each cached entry keeps a file descriptor open. Keep max well below the
+# worker's open-file limit: with a larger cache, Nginx runs out of
+# descriptors under load and answers 404 for files that exist.
+open_file_cache max=4096 inactive=60s;
+# After a correction is published, Nginx may serve the previous file for up
+# to this long (measured in the ResultBench correctness experiment).
+open_file_cache_valid ${OFC_VALID};
+
+# Per-IP rate limit: protects against scripts that enumerate roll numbers.
+# Large NAT gateways (colleges, mobile carriers) share IPs, so keep a burst.
+limit_req_zone $binary_remote_addr zone=perip:20m rate=${RATE_PER_IP};
+limit_req_status 429;
+
+map $arg_roll $shard {
+    "~^(?<s>[0-9]+)[0-9]{3}$" $s;
+    default "";
+}
+
+server {
+    listen 8080 reuseport backlog=4096;
+    root /srv/site;
+    access_log /dev/stdout lookups;
+
+    gzip on;
+    gzip_types application/json text/css application/javascript;
+    gzip_min_length 512;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+    add_header Referrer-Policy no-referrer always;
+
+    location = / {
+        add_header Cache-Control "public, max-age=60";
+        try_files /index.html =404;
+    }
+
+    location = /result {
+        limit_req zone=perip burst=20 nodelay;
+        default_type application/json;
+        if (!-f /data/released) {
+            add_header Cache-Control "no-store" always;
+            return 425 '{"status":"not_released"}';
+        }
+        if ($shard = "") {
+            return 404 '{"error":"roll number not found"}';
+        }
+        # Results do not change during the surge, so a CDN in front may cache
+        # them briefly. Keep this short if corrections are expected.
+        add_header Cache-Control "public, max-age=${RESULT_MAX_AGE}" always;
+        root /data;
+        try_files /results/$shard/$arg_roll.json =404;
+    }
+
+    error_page 404 = @notfound;
+    location @notfound {
+        default_type application/json;
+        add_header Cache-Control "public, max-age=60" always;
+        return 404 '{"error":"roll number not found"}';
+    }
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+}

@@ -1,0 +1,12 @@
+# RQ6: refresh amplification and recovery.
+name: paper-refresh
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+runs:
+  - designs: [a, d-a]
+    multiples: [2]
+    variants:
+      - {label: no-refresh, set: {users.retry_prob: 0, users.impatient_retry_prob: 0}}
+      - {label: default}
+      - {label: impatient, set: {users.retry_prob: 0.9, users.impatient_retry_prob: 0.95, users.patience_s: [3, 8], users.retry_delay_s: [0.5, 2]}}

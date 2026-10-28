@@ -1,0 +1,70 @@
+# Design M: the status quo at many boards. Two independent copies of design A
+# (each with its own database) published under different links; students pick
+# one and may switch after an error. The resource budget is split between the
+# mirrors so the total matches the other designs.
+services:
+  postgres-m2:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rb
+      POSTGRES_PASSWORD: rb
+      POSTGRES_DB: rb
+    command: >
+      postgres -c max_connections=200 -c shared_buffers=${PG_SHARED_BUFFERS:-256MB}
+      -c effective_cache_size=768MB -c work_mem=8MB -c synchronous_commit=off
+      -c max_wal_size=2GB
+    cpus: ${PG2_CPUS:-0.5}
+    mem_limit: ${PG_MEM:-1g}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    shm_size: 256mb
+    volumes:
+      - pgdata-m2:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rb -d rb"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  portal-m1:
+    image: resultbench:local
+    command: ["portal"]
+    environment:
+      RB_DESIGN: db
+      RB_DSN: postgres://rb:rb@postgres:5432/rb
+      RB_DB_MAX_CONNS: ${DB_MAX_CONNS:-16}
+      RB_RELEASE_AT: ${RELEASE_AT_MS:-}
+      RB_MAX_WORKERS: ${MAX_WORKERS:-256}
+      RB_MAX_QUEUE: ${MAX_QUEUE:-4096}
+      RB_PAGE_COST: ${PAGE_COST:-5ms}
+    cpus: ${PORTAL_CPUS:-0.5}
+    mem_limit: ${PORTAL_MEM:-512m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "rb", "fetch", "-timeout", "2s", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  portal-m2:
+    image: resultbench:local
+    command: ["portal"]
+    environment:
+      RB_DESIGN: db
+      RB_DSN: postgres://rb:rb@postgres-m2:5432/rb
+      RB_DB_MAX_CONNS: ${DB_MAX_CONNS:-16}
+      RB_RELEASE_AT: ${RELEASE_AT_MS:-}
+      RB_MAX_WORKERS: ${MAX_WORKERS:-256}
+      RB_MAX_QUEUE: ${MAX_QUEUE:-4096}
+      RB_PAGE_COST: ${PAGE_COST:-5ms}
+    cpus: ${PORTAL_CPUS:-0.5}
+    mem_limit: ${PORTAL_MEM:-512m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    depends_on:
+      postgres-m2: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "rb", "fetch", "-timeout", "2s", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

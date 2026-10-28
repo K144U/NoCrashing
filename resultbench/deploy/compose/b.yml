@@ -1,0 +1,44 @@
+# Design B: Redis cache-aside in front of PostgreSQL. Variants B0-B3 differ
+# only in the environment set by the runner (coalescing, XFetch, TTL jitter,
+# pre-warming).
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "${REDIS_MAXMEM:-900mb}", "--maxmemory-policy", "allkeys-lru"]
+    cpus: ${REDIS_CPUS:-0.5}
+    mem_limit: ${REDIS_MEM:-1g}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  portal:
+    image: resultbench:local
+    command: ["portal"]
+    environment:
+      RB_DESIGN: cache
+      RB_DSN: postgres://rb:rb@postgres:5432/rb
+      RB_REDIS: redis:6379
+      RB_DB_MAX_CONNS: ${DB_MAX_CONNS:-16}
+      RB_RELEASE_AT: ${RELEASE_AT_MS:-}
+      RB_MAX_WORKERS: ${MAX_WORKERS:-256}
+      RB_MAX_QUEUE: ${MAX_QUEUE:-4096}
+      RB_PAGE_COST: ${PAGE_COST:-5ms}
+      RB_CACHE_TTL: ${CACHE_TTL:-10m}
+      RB_TTL_JITTER: ${TTL_JITTER:-0}
+      RB_COALESCE: ${COALESCE:-false}
+      RB_XFETCH: ${XFETCH:-false}
+      RB_CANCEL_ON_DISCONNECT: ${CANCEL_ON_DISCONNECT:-false}
+    cpus: ${PORTAL_CPUS:-0.75}
+    mem_limit: ${PORTAL_MEM:-512m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "rb", "fetch", "-timeout", "2s", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

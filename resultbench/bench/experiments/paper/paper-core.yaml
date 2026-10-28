@@ -1,0 +1,9 @@
+# RQ2: capacity and cost of each design. No refreshes.
+name: paper-core
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+set: {users.retry_prob: 0, users.impatient_retry_prob: 0, users.repeat_view_prob: 0}
+runs:
+  - designs: [a, m, b0, c1, c2]
+    multiples: [1, 2, 5, 10]

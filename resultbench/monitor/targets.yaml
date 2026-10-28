@@ -1,0 +1,38 @@
+# Field monitor configuration (plan section 6.1).
+#
+# 1. Put your name and an email address in `contact`; it is sent in the
+#    User-Agent so a site owner can reach you.
+# 2. Check every URL a few days before each event: boards change domains and
+#    add mirror links when results are announced. Use the public landing or
+#    result-form page only. Never a URL that submits a roll number.
+# 3. Add each event when its release time is announced, with the timezone.
+
+contact: "Your Name, AKTU <you@example.org>"
+min_interval_s: 20   # cannot be set below 15
+
+targets:
+  # Central
+  - {id: cbse-results, group: cbse, url: "https://results.cbse.nic.in/"}
+  - {id: cbse-results-alt, group: cbse, url: "https://cbseresults.nic.in/"}
+  - {id: nic-results, group: nic, url: "https://results.nic.in/"}
+  - {id: digilocker, group: alt-channel, url: "https://www.digilocker.gov.in/"}
+  - {id: umang, group: alt-channel, url: "https://web.umang.gov.in/"}
+  - {id: nta-jeemain, group: nta, url: "https://jeemain.nta.nic.in/"}
+  - {id: nta-neet, group: nta, url: "https://neet.nta.nic.in/"}
+  # States
+  - {id: up-board, group: up, url: "https://upmsp.edu.in/"}
+  - {id: up-results, group: up, url: "https://upresults.nic.in/"}
+  - {id: bihar-board, group: bihar, url: "https://biharboardonline.bihar.gov.in/"}
+  - {id: maharashtra, group: maharashtra, url: "https://mahresult.nic.in/"}
+  - {id: mp-results, group: mp, url: "https://mpresults.nic.in/"}
+  - {id: karnataka-kea, group: karnataka, url: "https://kea.kar.nic.in/"}
+  # University
+  - {id: aktu, group: aktu, url: "https://aktu.ac.in/"}
+
+events:
+  # Format example. Replace with real events as they are announced.
+  - id: example-2027
+    release: "2027-05-13T13:00:00+05:30"
+    before_s: 3600
+    after_s: 10800
+    targets: [cbse-results, cbse-results-alt, nic-results, digilocker, umang]

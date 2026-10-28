@@ -31,14 +31,14 @@ and keep file caches short.
 impatient ones kept an unprotected portal down for the rest of our run
 (Section~\ref{sec:refresh}).
 
-\textbf{Use a waiting room for order, not for capacity.} A waiting room cannot
-serve students faster than the backend behind it. At 5$\times$ ours did not
-serve more students within the run; it turned failures into waits of a minute
-or more, and in front of a fast backend it only added cost
-(Section~\ref{sec:rq2}). A board that uses one should keep each student's place
-across refreshes (tokens), admit in arrival order if fairness matters, and also
-limit how much each admitted student may send to the backend; otherwise
-impatient students overload it anyway (Sections~\ref{sec:rq2}
+\textbf{A waiting room trades speed for completeness.} A waiting room cannot
+serve students faster than the backend behind it. In front of an overloaded
+portal, ours served almost every student in the end instead of fewer than
+half, but only after waits of minutes; in front of a fast backend it only
+added cost (Section~\ref{sec:rq2}). A board that uses one should admit in
+arrival order if fairness matters and limit how much each admitted student may
+send to the backend; tokens without such a limit let impatient students
+overload it and served fewer students (Sections~\ref{sec:rq2}
 and~\ref{sec:refresh}). With pre-computed results, the backend took the whole
 surge and no waiting room was needed.
 

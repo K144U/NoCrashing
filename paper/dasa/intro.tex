@@ -1,0 +1,41 @@
+\section{Introduction}
+
+When an Indian examination board declares results, lakhs of students try to
+open the result website at the same time~\cite{ht2021ssc}. The release time is
+announced in advance, almost every request asks for one roll number, and the
+results do not change while students read them. Few web workloads are
+simpler, yet result websites keep failing. The chairman of JEE Advanced 2016
+described the portal receiving about \num{10000} requests per second against
+a server that could hold \num{2000}~\cite{pagalguy2016jee}. On Maharashtra SSC
+result day in 2021, schools reported that at least half of their students
+could not see results until evening~\cite{ht2021ssc}, and the state's
+education minister apologised~\cite{careerindia2021ssc}. Kenya's examination
+council reported up to \num{300000} hits per second~\cite{knec2025x}, and in
+2025 WAEC in Nigeria withdrew its result checker over \emph{wrong}
+results~\cite{icir2025waec}.
+
+A board that wants to avoid this has to decide how to build its website, and
+the options are well known: caching or pre-generating
+pages~\cite{challenger1999scalable,labrinidis2000webview}, protecting caches
+against stampedes~\cite{vattani2015xfetch,nishtala2013memcache}, admission
+control~\cite{welsh2001seda,elnikety2004gatekeeper}, and commercial ``virtual
+waiting rooms'' that queue visitors during surges~\cite{cloudflare2026wr,aws2022vwr}.
+What is missing is evidence about which option works for this workload.
+Studies of flash crowds look at crowds that are often
+unforeseen~\cite{jung2002flash,wendell2011going}, while a result release is
+announced. The closest recent studies compare a database-only design with a
+Redis cache for university systems under a fixed number of users, one with a
+real database~\cite{putranto2026redis} and one with simulated
+delays~\cite{tofan2026cacheaside}; neither tests pre-computed results or
+waiting rooms, models students who refresh, or checks that the answers are
+correct. We found no peer-reviewed evaluation of waiting rooms at all.
+
+This paper gives boards measured evidence for four decisions: which
+architecture to use (Q1), whether to put a waiting room in front of it (Q2),
+how to keep results correct when they are corrected or released early (Q3),
+and how caches and refreshing students change the load (Q4). We contribute
+ResultBench, an open-source testbed that runs eleven designs under one
+resource budget, replays a result-day surge of students who refresh, and
+checks every answer against ground truth; a controlled comparison of the
+designs; and a decision guide that turns the measurements into advice
+(Table~\ref{tab:guide}).

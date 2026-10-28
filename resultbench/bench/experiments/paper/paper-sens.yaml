@@ -1,0 +1,15 @@
+# Sensitivity to the modelled page-building cost (5 ms in every other grid).
+# Same students and the same absolute load as paper-core at 2x (no refreshes),
+# with a cheaper page. C2 never builds pages, so its paper-core results apply
+# unchanged and it is not repeated.
+name: paper-sens
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+set: {users.retry_prob: 0, users.impatient_retry_prob: 0, users.repeat_view_prob: 0}
+runs:
+  - designs: [a, b0]
+    multiples: [2]
+    variants:
+      - {label: page-2ms, env: {PAGE_COST: 2ms}}
+      - {label: page-0ms, env: {PAGE_COST: "0"}}

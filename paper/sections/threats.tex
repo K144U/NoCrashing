@@ -14,10 +14,9 @@ on result day. Patience, refresh probabilities and delays are assumptions;
 Section~\ref{sec:refresh} shows how much the conclusions depend on them.
 
 \textbf{Modelled server cost.} The \SI{5}{ms} page-building cost stands in for
-the framework overhead of real portal stacks. We did not vary it in this
-paper. It favours designs that avoid building pages at request time: a lower
-value would make A, M and B cheaper per page and raise A's capacity, while C1
-and C2 never pay it.
+the framework overhead of real portal stacks. With \SI{2}{ms} or \SI{0}{ms},
+A and B0 took the 2$\times$ load easily (Section~\ref{sec:rq1}), so absolute
+capacities depend on it; the cost order of the designs did not.
 
 \textbf{Scope.} We do not model login or captcha services, bots, denial of
 service, DNS, or a real CDN, each of which has caused real result-day outages.

@@ -1,0 +1,24 @@
+\begin{abstract}
+On result day, lakhs of students try to open an examination board's website at
+the same moment, and these websites often fail. Boards need evidence to decide how to build them.
+We built
+ResultBench, a testbed that runs eleven designs of a result website on the
+same two processor threads, replays a result-day surge of students who wait and
+press refresh, and checks every answer. On one
+machine, a website that builds every page from a database served every
+student within five seconds at the load it was sized for, but only 30.8
+percent at twice that load; splitting it into mirror sites or adding an empty
+cache did not help. Preparing every result in advance served every student
+at ten times that load and used 12.5 to
+57.8 times less processor time per student, after less than ten seconds of
+preparation. No design returned a wrong result, and old results after a
+correction lasted more than a fraction of a second only where cached copies
+were not updated. Because each
+student asks for a different result, measures that protect a cache from many
+identical requests changed nothing, while filling the cache before release
+served everyone. Impatient students who kept refreshing kept an unprotected
+website overloaded. A virtual waiting room in front of that website served
+98.3 percent of students instead of 43.3 percent, but only after waits of
+minutes. We turn these measurements into a decision
+guide for examination boards and release the testbed as open source.
+\end{abstract}

@@ -267,6 +267,49 @@ def waiting_room() -> None:
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
     write("tab_wr.tex", "\n".join(lines) + "\n")
 
+    # One-column version for the short paper: backend A only.
+    short = [r"\begin{table}[t]",
+             r"\caption{Design A alone and behind a waiting room at 5$\times$ with refreshing students "
+             r"(median of 3 runs; run ends 135\,s after release).}",
+             r"\label{tab:wr}", r"\centering", r"\footnotesize", r"\setlength{\tabcolsep}{2.5pt}",
+             r"\begin{tabular}{@{}lrrrrr@{}}", r"\toprule",
+             r"Waiting room & \multicolumn{2}{c}{Served (\%)} & Waiting & Wait & $\tau$ \\",
+             r"\cmidrule(lr){2-3}",
+             r" & 10\,s & at all & at end (\%) & p50 (s) & \\", r"\midrule"]
+    for d, lab in order[:5]:
+        r = s[(s["design"] == d) & (s["label"] == lab)]
+        if r.empty:
+            continue
+        r = r.iloc[0]
+        name = "none (A alone)" if lab == "" else lab.replace("-", ", ").replace("fifo", "FIFO").replace("random", "lottery")
+        short.append(f"{name} & {fmt(r['success_10s'], pct=True)} & {fmt(r['served_ok'], pct=True)} & "
+                     f"{fmt(r['unfinished_share'], pct=True)} & {fmt(r['wait_p50_ms'] / 1000, digits=1)} & "
+                     f"{fmt(r.get('kendall_tau_prerelease'))} \\\\")
+    short += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    write("tab_wr_short.tex", "\n".join(short) + "\n")
+
+
+# ------------------------------------------------- page cost and long runs ---
+def sensitivity() -> None:
+    """A and B0 at the paper-core 2x load with a cheaper page (paper-sens)."""
+    df = load("paper-sens")
+    if df.empty:
+        return
+    s = agg(df, ["design", "label"], ["success_5s", "success_10s", "served_ok", "cpu_s_per_1k_served"])
+    s.to_csv(GEN / "sens_summary.csv", index=False)
+
+
+def wr_long() -> None:
+    """D-A at 5x with 240 s to drain the queue (paper-wr-long)."""
+    df = load("paper-wr-long")
+    if df.empty:
+        return
+    df["unfinished_share"] = df["unfinished_users"] / df["users"]
+    s = agg(df, ["design", "label"], ["success_5s", "success_10s", "served_ok", "unfinished_share", "wait_p50_ms",
+                                      "wait_p95_ms", "time_to_result_p50_ms", "time_to_result_p95_ms",
+                                      "backend_amplification", "cpu_s_per_1k_served", "wr_abandoned"])
+    s.to_csv(GEN / "wr_long_summary.csv", index=False)
+
 
 # ------------------------------------------------------------- correctness ---
 def correctness() -> None:
@@ -459,6 +502,8 @@ def main() -> None:
     workload()
     release_lag()
     waiting_room()
+    sensitivity()
+    wr_long()
     correctness()
     corrections_exposure()
     cache()

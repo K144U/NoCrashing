@@ -1,8 +1,7 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-Result portals face a load that is announced in advance, read-only and simple,
-yet they keep failing. We built ResultBench, which runs eleven portal designs
+We built ResultBench, which runs eleven portal designs
 under the same two-CPU budget, replays a result-day surge with students who
 refresh, and checks every answer against ground truth. On one machine, designs
 that build pages on request failed by twice the capacity of a database-backed
@@ -11,8 +10,9 @@ fraction of the CPU. No design returned wrong results; stale results came only
 from copies that were not updated after a correction. The weakness of
 cache-aside on result day is cold misses, not stampedes, and refreshing
 students can keep an unprotected portal overloaded.
-A waiting room turned failures into long waits rather than serving more
-students, and protected the backend only while admitted students behaved.
+A waiting room in front of an overloaded portal served almost everyone, but
+only after waits of minutes, and protected the backend only while admitted
+students behaved.
 
 Several questions remain open. We have not measured a real result day; a field
 study, for example by monitoring portals during a result season or by

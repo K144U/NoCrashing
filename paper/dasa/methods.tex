@@ -1,0 +1,87 @@
+\section{Methods}
+\label{sec:method}
+
+\subsection{Designs}
+\label{sec:designs}
+
+Every design answers \texttt{GET /result?roll=$n$} with the same JSON body and
+gets the same budget of two CPUs (hardware threads) for answering students
+(Fig.~\ref{fig:designs}). Before the announced release time every design
+answers ``not released''.
+\textbf{A} builds each page from PostgreSQL (a 4-table join).
+\textbf{M} splits the budget into two independent copies of A (``mirror
+links''); each student picks one at random and, on retry, switches with
+probability 0.5.
+\textbf{B0} puts a Redis cache in front of A (cache-aside); \textbf{B1} adds
+request coalescing, \textbf{B2} probabilistic early
+recomputation~\cite{vattani2015xfetch}, and \textbf{B3} fills the cache before
+release.
+\textbf{C1} pre-computes every result into Redis, and \textbf{C2} writes one
+JSON file per student, served by Nginx; both keep an idle back-office
+PostgreSQL (0.25 CPU, counted in cost).
+\textbf{D} puts a waiting room (0.25 CPU) in front of A, C1 or C2 (we test
+D-A and D-C1). It admits
+students at 80\% of the backend's capacity, either first come, first served
+(FIFO) or by a lottery among early arrivals, as some products
+offer~\cite{cloudflare2026queue}. Its ticket is either \emph{naive} (held in
+the page and lost when the student presses refresh) or a signed \emph{token}
+cookie (kept on refresh). An admitted student may use the backend for
+\SI{60}{s}; the waiting room limits neither how many admitted students are
+active nor how many requests each sends.
+
+\begin{figure*}[t]
+\input{diagrams/designs.tex}
+\caption{How each design answers a request. Solid arrows are on the request
+path; dashed arrows happen before release (C1, C2) or tell a queued student
+their position (D).}
+\label{fig:designs}
+\end{figure*}
+
+All application designs run the same Go server, which works on at most 256
+requests at once and lets 4096 more wait, as real servers
+do~\cite{apache2026mpm}. Real portals run full web frameworks; to stand in
+for that work, building one page from the database costs \SI{5}{ms} of CPU.
+This value is an assumption, which we vary in Section~\ref{sec:rq1}.
+
+\subsection{Students and surge}
+
+\begin{figure}[t]
+\centering
+\input{diagrams/student.tex}
+\caption{How each simulated student behaves. All numbers are assumptions;
+Section~\ref{sec:rq4} varies them.}
+\label{fig:student}
+\end{figure}
+
+The data are \num{200000} synthetic students with six subjects each,
+generated from a seed so that the right answer for any roll number can be
+recomputed; no real student data was used. Students arrive as an open-loop
+Poisson process~\cite{schroeder2006open}: the rate rises over the \SI{20}{s}
+before release to 20\% of the peak, reaches the peak within \SI{3}{s} of
+release and decays with a time constant of \SI{30}{s} over \SI{90}{s}. Real
+result days stay busy far longer~\cite{ht2021ssc}; we compress the surge to
+keep runs short. Early students reload every 5--\SI{15}{s} until release. Each
+student waits 5--\SI{20}{s} for an answer; after an error they refresh with
+probability 0.8, after waiting in vain with probability 0.9, after a pause of
+1--\SI{5}{s}, for at most 20 attempts. These numbers are assumptions;
+Section~\ref{sec:rq4} varies them.
+
+\subsection{Testbed and measurement}
+
+All runs used one desktop computer (AMD Ryzen~7 5800X, 8 cores, \SI{32}{GB},
+Windows~11 with WSL\,2 and Docker~29.9). The design under test was pinned to
+the two hardware threads of one core and the load generator to twelve threads
+on six other cores. We first found design A's capacity: the highest constant
+arrival rate at which 99\% of students got a correct result within
+\SI{2}{s}, \CapA\ students/s. Loads are multiples of it; the JEE 2016
+incident was about 5$\times$~\cite{pagalguy2016jee}. An oracle classifies every
+response as correct, stale (the old version after a correction), wrong,
+missing (``not found'' for a real student) or failed. We report the share of
+students who got a correct result within 5 or \SI{10}{s} of their first
+request after release, or at all, and the CPU-seconds used by all containers
+per \num{1000} students served. Each configuration ran 3 times in random
+order; we report medians with 95\% bootstrap intervals. Against k6's
+constant-arrival-rate executor~\cite{k6docs} at 150 requests/s, our generator
+measured median latencies of 5.3--\SI{5.5}{ms} against \SI{5.4}{ms}. Six
+waiting-room runs in which the generator ran out of local ports were discarded
+and run again with a wider port range.

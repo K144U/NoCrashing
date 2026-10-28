@@ -105,3 +105,15 @@ python -m model.capacity plan --cpu-costs runs/core/report/summary.csv --out run
 
 `fit` chooses the overload efficiency η and reports leave-one-multiple-out
 prediction error; quote that error with the planning table.
+
+## Extra grids for the paper
+
+Two grids added after the main paper run (same CPU split, run with
+`python3 bench/rb.py grid <file>`):
+
+| Grid | Runs | Question |
+|---|---|---|
+| `paper-sens` | 12 | Does the 5 ms page cost decide the results? A and B0 at the paper-core 2x load (no refreshes) with `PAGE_COST` 2 ms and 0. C2 never builds pages, so its paper-core runs apply unchanged. |
+| `paper-wr-long` | 6 | How many students does the waiting room serve once its queue empties? D-A at 5x, FIFO, token and naive tickets, with `generator.drain_s: 240` (a 330 s run instead of 135 s). A alone is not repeated: none of its students were still waiting at the end of `paper-wr`. |
+
+`paper/make_figures.py` writes `sens_summary.csv` and `wr_long_summary.csv`.

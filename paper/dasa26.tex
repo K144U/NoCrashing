@@ -1,0 +1,47 @@
+% Short version for DASA'26 (at most 5 pages; required sections: Introduction,
+% Methods, Results and Discussion, Conclusion, Acknowledgments, References).
+% The full version is main.tex. Both use generated/ and figures/ from make_figures.py.
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{url}
+\usepackage{xurl}
+\usepackage{xcolor}
+\usepackage{siunitx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,shadows,calc}
+\usepackage[hidelinks]{hyperref}
+\sisetup{group-separator={,},group-minimum-digits=4}
+
+\input{generated/numbers.tex}
+
+\begin{document}
+
+\title{Surviving Result Day: A Measured Decision Guide\\for Building Examination-Result Websites}
+
+\author{\IEEEauthorblockN{Sankalp Pathak and Imran Khan}
+\IEEEauthorblockA{Department of Computer Science and Engineering,
+Azad Institute of Engineering and Technology, Lucknow, India\\
+(affiliated to Dr.~A.~P.~J.~Abdul Kalam Technical University)\\
+pathaksankalp04@gmail.com, pe.imran@gmail.com}}
+
+\maketitle
+
+\input{dasa/abstract.tex}
+
+\begin{IEEEkeywords}
+examination results, flash crowds, web architecture, waiting rooms, decision guide
+\end{IEEEkeywords}
+
+\input{dasa/intro.tex}
+\input{dasa/methods.tex}
+\input{dasa/results.tex}
+\input{dasa/conclusion.tex}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

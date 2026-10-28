@@ -334,6 +334,8 @@ These items from the gap analysis must be done in the first two weeks. Many coul
 
 ## 14. Deliverables and impact
 
+Implementation status: the software for all three studies is in [`resultbench/`](resultbench/README.md) (designs, generator, oracle, runner, experiment grids, analysis, capacity model, field monitor, result-in-a-box). Design decisions and assumptions are documented in [`resultbench/docs/methodology.md`](resultbench/docs/methodology.md).
+
 1. **ResultBench:** open-source harness with all portal designs, the data generator, k6 scenarios with the refresh model, the correctness oracle, monitoring configs and analysis notebooks, with a one-command reproduction guide.
 2. **Result-day field dataset:** anonymised monitor readings for the 2027 season, plus RTI replies.
 3. **Capacity-planning table and result-in-a-box** reference deployment, written for a board's IT cell.

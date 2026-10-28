@@ -19,6 +19,9 @@ type surgeOverrides struct {
 	peak      *float64
 	seed      *uint64
 	name      *string
+	n         *int
+	rollBase  *int64
+	oracle    *string
 }
 
 func addSurgeOverrides(fs *flag.FlagSet) surgeOverrides {
@@ -28,6 +31,9 @@ func addSurgeOverrides(fs *flag.FlagSet) surgeOverrides {
 		peak:      fs.Float64("peak", 0, "peak arrivals per second (overrides the scenario)"),
 		seed:      fs.Uint64("gen-seed", 0, "generator seed (overrides the scenario)"),
 		name:      fs.String("name", "", "run name (overrides the scenario)"),
+		n:         fs.Int("n", 0, "number of students (overrides dataset.n)"),
+		rollBase:  fs.Int64("roll-base", 0, "first roll number (overrides dataset.roll_base)"),
+		oracle:    fs.String("oracle", "", "dataset | roll_only (use roll_only against real data)"),
 	}
 }
 
@@ -46,6 +52,15 @@ func (o surgeOverrides) apply(sc *surge.Scenario) {
 	}
 	if *o.name != "" {
 		sc.Name = *o.name
+	}
+	if *o.n != 0 {
+		sc.Dataset.N = *o.n
+	}
+	if *o.rollBase != 0 {
+		sc.Dataset.RollBase = *o.rollBase
+	}
+	if *o.oracle != "" {
+		sc.Oracle = *o.oracle
 	}
 }
 

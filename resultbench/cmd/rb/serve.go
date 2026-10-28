@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -114,10 +115,14 @@ func runWaitingRoom(args []string) error {
 	session := fs.Duration("session-ttl", 60*time.Second, "how long an admitted user may use the backend")
 	abandon := fs.Duration("abandon-after", 30*time.Second, "skip queued users not seen for this long")
 	poll := fs.Duration("poll", 5*time.Second, "suggested time between status checks")
-	secret := fs.String("secret", "change-me", "HMAC secret for token mode")
+	secret := fs.String("secret", "", "HMAC secret for token mode (required)")
 	seed := fs.Uint64("seed", 1, "seed for the random policy")
+	gate := fs.String("gate-path", "/result", "only requests under this path go through admission (empty: all)")
 	if err := parse(fs, args); err != nil {
 		return err
+	}
+	if *mode == wroom.ModeToken && len(*secret) < 8 {
+		return fmt.Errorf("token mode needs -secret (RB_SECRET) of at least 8 characters")
 	}
 	releaseAt, err := epochMs(*release)
 	if err != nil {
@@ -127,7 +132,7 @@ func runWaitingRoom(args []string) error {
 	defer stop()
 	room := wroom.New(wroom.Config{
 		Policy: *policy, Mode: *mode, ReleaseAt: releaseAt, AdmitRate: *rate, Burst: *burst, MaxActive: *maxActive,
-		SessionTTL: *session, AbandonAfter: *abandon, PollInterval: *poll, Secret: []byte(*secret), Seed: *seed,
+		SessionTTL: *session, AbandonAfter: *abandon, PollInterval: *poll, Secret: []byte(*secret), Seed: *seed, GatePath: *gate,
 	})
 	h, err := wroom.NewHandler(room, *backend)
 	if err != nil {

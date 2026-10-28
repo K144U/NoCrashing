@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Examination Results</title>
+<style>
+  :root { --fg:#1b1f24; --muted:#5b6470; --bg:#f6f7f9; --card:#fff; --accent:#0b5cad; --bad:#b42318; --line:#dde1e6; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--fg); background:var(--bg); }
+  main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 20px; }
+  form { display:flex; gap:8px; flex-wrap:wrap; }
+  input { flex:1 1 220px; font-size:1.1rem; padding:10px 12px; border:1px solid var(--line); border-radius:8px; }
+  button { font-size:1rem; padding:10px 18px; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:default; }
+  #status { margin:16px 0; color:var(--muted); min-height:1.5em; }
+  #status.bad { color: var(--bad); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; }
+  th, td { text-align:left; padding:6px 4px; border-bottom:1px solid var(--line); }
+  td.num, th.num { text-align:right; }
+  .meta { display:grid; grid-template-columns: max-content 1fr; gap:2px 12px; }
+  .meta dt { color:var(--muted); }
+  .meta dd { margin:0; }
+  .verdict { font-weight:600; margin-top:12px; }
+  @media print { form, #status { display:none; } body { background:#fff; } .card { border:0; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Examination Results</h1>
+  <p class="sub">Enter your roll number. If the site is busy, this page waits and retries for you; please do not keep refreshing.</p>
+  <form id="f">
+    <input id="roll" inputmode="numeric" pattern="[0-9]{4,15}" required placeholder="Roll number" autocomplete="off">
+    <button id="go" type="submit">Show result</button>
+  </form>
+  <div id="status" role="status" aria-live="polite"></div>
+  <div id="out"></div>
+</main>
+<script>
+// Client behaviour matters on result day: this page backs off with jitter on
+// errors instead of hammering the server, keeps its waiting-room ticket when
+// polling, and tells the student what is happening.
+const $ = (id) => document.getElementById(id);
+let ticket = null, timer = null, failures = 0;
+
+function say(msg, bad) { $("status").textContent = msg; $("status").className = bad ? "bad" : ""; }
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function render(r) {
+  const rows = r.marks.map((m) => `<tr><td>${esc(m.name)}</td><td class="num">${m.marks}</td></tr>`).join("");
+  $("out").innerHTML = `<div class="card">
+    <dl class="meta">
+      <dt>Roll number</dt><dd>${r.roll}</dd><dt>Name</dt><dd>${esc(r.name)}</dd>
+      <dt>Father's name</dt><dd>${esc(r.father_name)}</dd><dt>School</dt><dd>${esc(r.school_name)}</dd>
+    </dl>
+    <table><thead><tr><th>Subject</th><th class="num">Marks</th></tr></thead><tbody>${rows}
+      <tr><th>Total</th><th class="num">${r.total} / ${r.max_total}</th></tr></tbody></table>
+    <div class="verdict">${esc(r.result)}${r.division && r.division !== "-" ? " — " + esc(r.division) + " division" : ""} (${r.percentage}%)</div>
+    <p class="sub">Provisional. Verify with the marksheet issued by the board.</p></div>`;
+}
+
+function later(fn, ms) { clearTimeout(timer); timer = setTimeout(fn, ms); }
+
+async function lookup(roll) {
+  const headers = ticket ? {"X-Queue-Ticket": ticket} : {};
+  let res, body = null;
+  try {
+    res = await fetch(`/result?roll=${encodeURIComponent(roll)}`, {headers, credentials: "same-origin"});
+    body = await res.json().catch(() => null);
+  } catch (e) { res = null; }
+  if (res && res.status === 200 && body && body.status === "queued") {
+    ticket = body.ticket || ticket;
+    failures = 0;
+    say(body.position > 0 ? `You are in the queue. About ${body.position} people ahead of you. This page updates by itself.`
+                          : "You are in the queue. This page updates by itself.");
+    return later(() => lookup(roll), body.retry_after_ms || 10000);
+  }
+  if (res && res.status === 200 && body && body.roll) { say(""); $("go").disabled = false; return render(body); }
+  if (res && res.status === 425) { say("Results have not been declared yet. This page will check again in 30 seconds."); return later(() => lookup(roll), 30000); }
+  if (res && res.status === 404) { say("Roll number not found. Please check and try again.", true); $("go").disabled = false; return; }
+  failures++;
+  const wait = Math.min(60000, 2000 * 2 ** Math.min(failures, 5)) * (0.5 + Math.random());
+  say(`The site is busy. Trying again in ${Math.round(wait / 1000)} seconds…`, true);
+  later(() => lookup(roll), wait);
+}
+
+$("f").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const roll = $("roll").value.trim();
+  if (!/^[0-9]{4,15}$/.test(roll)) { say("Please enter a valid roll number.", true); return; }
+  $("go").disabled = true; $("out").innerHTML = ""; failures = 0;
+  say("Looking up your result…");
+  lookup(roll);
+});
+</script>
+</body>
+</html>

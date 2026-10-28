@@ -40,6 +40,9 @@ type Scenario struct {
 	Generator   GeneratorSpec   `yaml:"generator" json:"generator"`
 	DeadlinesS  []float64       `yaml:"deadlines_s" json:"deadlines_s"`
 	WaitingRoom WaitingRoomSpec `yaml:"waiting_room" json:"waiting_room"`
+	// Oracle is "dataset" (check every field against the synthetic ground
+	// truth) or "roll_only" (check only the roll number; for real data).
+	Oracle string `yaml:"oracle" json:"oracle"`
 }
 
 // DatasetSpec must match the dataset loaded into the system under test.
@@ -73,6 +76,9 @@ type SurgeSpec struct {
 	DecayTauS           float64 `yaml:"decay_tau_s" json:"decay_tau_s"`
 	FloorFrac           float64 `yaml:"floor_frac" json:"floor_frac"`
 	PostReleaseS        float64 `yaml:"post_release_s" json:"post_release_s"`
+	// Arrivals is "poisson" (independent students, the default) or "even"
+	// (evenly spaced, as k6's arrival-rate executors do; for cross-checks).
+	Arrivals string `yaml:"arrivals" json:"arrivals"`
 }
 
 // KeySpec decides which roll number each student looks up.
@@ -147,7 +153,7 @@ func Default() Scenario {
 		Dataset:          DatasetSpec{Seed: d.Seed, N: d.N, RollBase: d.RollBase, CorrectionPerMille: d.CorrectionPerMille, NumSchools: d.NumSchools},
 		Surge: SurgeSpec{
 			Shape: "surge", PeakUsersPerS: 100, PreReleaseS: 30, PreReleaseStartFrac: 0.02, PreReleaseEndFrac: 0.2,
-			RiseS: 5, DecayTauS: 120, FloorFrac: 0.02, PostReleaseS: 300,
+			RiseS: 5, DecayTauS: 120, FloorFrac: 0.02, PostReleaseS: 300, Arrivals: "poisson",
 		},
 		Keys: KeySpec{Dist: "uniform", ZipfS: 1.1, TypoRate: 0.01},
 		Users: UserSpec{
@@ -159,6 +165,7 @@ func Default() Scenario {
 		Generator:   GeneratorSpec{MaxUsers: 200_000, Seed: 1, DrainS: 60, MaxBodyBytes: 64 << 10},
 		DeadlinesS:  []float64{2, 5, 10},
 		WaitingRoom: WaitingRoomSpec{Mode: "token"},
+		Oracle:      "dataset",
 	}
 }
 
@@ -187,6 +194,8 @@ func (s *Scenario) Validate() error {
 		return fmt.Errorf("surge.peak_users_per_s must be positive")
 	case s.Surge.Shape != "surge" && s.Surge.Shape != "constant":
 		return fmt.Errorf("surge.shape must be surge or constant")
+	case s.Surge.Arrivals != "poisson" && s.Surge.Arrivals != "even":
+		return fmt.Errorf("surge.arrivals must be poisson or even")
 	case s.Keys.Dist != "uniform" && s.Keys.Dist != "zipf":
 		return fmt.Errorf("keys.dist must be uniform or zipf")
 	case s.Keys.Dist == "zipf" && s.Keys.ZipfS <= 1:
@@ -195,6 +204,8 @@ func (s *Scenario) Validate() error {
 		return fmt.Errorf("users.patience_s must be a positive range")
 	case s.Users.MaxAttempts <= 0:
 		return fmt.Errorf("users.max_attempts must be positive")
+	case s.Oracle != "dataset" && s.Oracle != "roll_only":
+		return fmt.Errorf("oracle must be dataset or roll_only")
 	case s.WaitingRoom.Mode != "naive" && s.WaitingRoom.Mode != "token":
 		return fmt.Errorf("waiting_room.mode must be naive or token")
 	}

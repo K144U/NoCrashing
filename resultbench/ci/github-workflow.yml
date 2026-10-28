@@ -1,0 +1,72 @@
+# GitHub Actions workflow for ResultBench. To enable it, copy this file to
+# .github/workflows/resultbench.yml at the repository root (it could not be
+# pushed from the session that created it, which lacked the workflow scope).
+
+name: resultbench
+
+on:
+  push:
+    paths: ["resultbench/**", ".github/workflows/resultbench.yml"]
+  pull_request:
+    paths: ["resultbench/**", ".github/workflows/resultbench.yml"]
+
+defaults:
+  run:
+    working-directory: resultbench
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: resultbench/go.sum
+      - run: test -z "$(gofmt -l cmd internal)"
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q tests
+
+  # Brings up the static design and runs a short surge, end to end.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [go]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python bench/rb.py build
+      - run: python bench/rb.py run --design c2 --capacity 100 --multiple 1 --scenario bench/scenarios/quick.yaml --experiment ci --name c2
+      - run: python bench/rb.py run --design a --capacity 100 --multiple 1 --scenario bench/scenarios/quick.yaml --experiment ci --name a
+      - name: Check results
+        run: |
+          python - <<'PY'
+          import json
+          for run in ("c2", "a"):
+              s = json.load(open(f"runs/ci/{run}/load/summary.json"))
+              print(run, s["user_served_ok"], s["requests_by_outcome"])
+              assert s["users"] > 1000, "too few users"
+              assert s["wrong_requests"] == 0 and s["stale_requests"] == 0, "correctness failure"
+          s = json.load(open("runs/ci/c2/load/summary.json"))
+          assert s["user_served_ok"] > 0.99, "static design should serve everyone at 1x"
+          PY
+      - run: python -m analysis.report runs/ci --recollect
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-runs
+          path: resultbench/runs/ci
+          retention-days: 7

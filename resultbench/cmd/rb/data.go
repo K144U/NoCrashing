@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/k144u/nocrashing/resultbench/internal/dataset"
@@ -186,8 +190,12 @@ func runRelease(args []string) error {
 	at := fs.String("at", "", "release time (Unix ms); empty: release now")
 	path := fs.String("flag", "/data/released", "flag file to create at release")
 	exit := fs.Bool("exit", false, "exit after release instead of idling")
+	requireAt := fs.Bool("require-at", false, "refuse to start without a release time (production)")
 	if err := parse(fs, args); err != nil {
 		return err
+	}
+	if *requireAt && (*at == "" || *at == "0") {
+		return fmt.Errorf("no release time: set RB_AT (Unix milliseconds); refusing to release immediately")
 	}
 	ctx, stop := signalContext()
 	defer stop()
@@ -258,4 +266,104 @@ func runFetch(args []string) error {
 		}
 	}
 	return nil
+}
+
+// runPublishCSV turns a board's own results file into static result files
+// for Nginx (the result-in-a-box deployment). Header:
+//
+//	roll,name,father_name,school_code,school_name,district,HIN:Hindi,ENG:English,...
+//
+// Every column after district is a subject written as CODE:Name, holding marks.
+func runPublishCSV(args []string) error {
+	fs := flag.NewFlagSet("publish-csv", flag.ExitOnError)
+	in := fs.String("in", "", "results CSV")
+	dir := fs.String("dir", "/data/results", "output directory")
+	verify := fs.Bool("verify", true, "read every file back and compare after writing")
+	if err := parse(fs, args); err != nil {
+		return err
+	}
+	if *in == "" {
+		return fmt.Errorf("-in is required")
+	}
+	f, err := os.Open(*in)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	r := csv.NewReader(bufio.NewReader(f))
+	header, err := r.Read()
+	if err != nil {
+		return err
+	}
+	const fixed = 6
+	if len(header) <= fixed || header[0] != "roll" {
+		return fmt.Errorf("header must start with roll,name,father_name,school_code,school_name,district and then subjects")
+	}
+	var subjects []dataset.Subject
+	for _, h := range header[fixed:] {
+		code, name, ok := strings.Cut(h, ":")
+		if !ok {
+			return fmt.Errorf("subject column %q must be CODE:Name", h)
+		}
+		subjects = append(subjects, dataset.Subject{Code: code, Name: name})
+	}
+	start := time.Now()
+	seen := map[int64]bool{}
+	var recs []dataset.Record
+	for line := 2; ; line++ {
+		row, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("line %d: %w", line, err)
+		}
+		roll, err := strconv.ParseInt(row[0], 10, 64)
+		if err != nil || roll < 1000 {
+			return fmt.Errorf("line %d: bad roll number %q (need at least 4 digits)", line, row[0])
+		}
+		if seen[roll] {
+			return fmt.Errorf("line %d: duplicate roll number %d", line, roll)
+		}
+		seen[roll] = true
+		school, _ := strconv.Atoi(row[3])
+		rec := dataset.Record{Roll: roll, Name: row[1], FatherName: row[2], SchoolCode: school, SchoolName: row[4],
+			District: row[5], Version: 1}
+		for k, s := range subjects {
+			m, err := strconv.Atoi(strings.TrimSpace(row[fixed+k]))
+			if err != nil || m < 0 || m > 100 {
+				return fmt.Errorf("line %d: bad marks %q for %s", line, row[fixed+k], s.Code)
+			}
+			rec.Marks = append(rec.Marks, dataset.Mark{Code: s.Code, Name: s.Name, Marks: m})
+		}
+		dataset.Finalize(&rec)
+		recs = append(recs, rec)
+	}
+	ctx, stop := signalContext()
+	defer stop()
+	o := publish.Options{Target: publish.TargetFiles, Dir: *dir, Fraction: 1}
+	rep, err := publish.Resume(ctx, o, recs)
+	if err != nil {
+		return err
+	}
+	rep.Seconds = time.Since(start).Seconds()
+	if *verify {
+		for _, rec := range recs {
+			b, err := os.ReadFile(publish.ShardPath(*dir, rec.Roll))
+			if err != nil {
+				rep.VerifiedBad++
+				continue
+			}
+			var got dataset.Record
+			if json.Unmarshal(b, &got) != nil || dataset.Fingerprint(got) != dataset.Fingerprint(rec) {
+				rep.VerifiedBad++
+			} else {
+				rep.VerifiedOK++
+			}
+		}
+		if rep.VerifiedBad > 0 {
+			return fmt.Errorf("verification failed for %d of %d results", rep.VerifiedBad, len(recs))
+		}
+	}
+	return writeReport("", rep)
 }

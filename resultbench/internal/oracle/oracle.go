@@ -87,6 +87,10 @@ type Status struct {
 // Oracle holds the dataset configuration.
 type Oracle struct {
 	Cfg dataset.Config
+	// RollOnly checks only that a result belongs to the requested roll
+	// number. Use it when load-testing a deployment with real data, for which
+	// the synthetic ground truth does not apply; 404s then count as correct.
+	RollOnly bool
 }
 
 // Classify decides the outcome of one response to GET /result?roll=roll.
@@ -94,6 +98,9 @@ type Oracle struct {
 // the request was sent.
 func (o Oracle) Classify(code int, body []byte, roll int64, correctionsPublished bool) (Outcome, *Status) {
 	idx, valid := o.Cfg.Valid(roll)
+	if o.RollOnly {
+		valid = false // unknown: a 404 may be right
+	}
 	switch {
 	case code == 200:
 		// fall through to body inspection below
@@ -131,6 +138,12 @@ func (o Oracle) Classify(code int, body []byte, roll int64, correctionsPublished
 	var rec dataset.Record
 	if err := json.Unmarshal(body, &rec); err != nil || rec.Roll == 0 {
 		return SoftFailure, nil
+	}
+	if o.RollOnly {
+		if rec.Roll == roll {
+			return Correct, nil
+		}
+		return Wrong, nil
 	}
 	if !valid || rec.Roll != roll {
 		return Wrong, nil

@@ -18,17 +18,20 @@ A board that wants to avoid this has to decide how to build its website, and
 the options are well known: caching or pre-generating
 pages~\cite{challenger1999scalable,labrinidis2000webview}, protecting caches
 against stampedes~\cite{vattani2015xfetch,nishtala2013memcache}, admission
-control~\cite{welsh2001seda,elnikety2004gatekeeper}, and commercial ``virtual
-waiting rooms'' that queue visitors during surges~\cite{cloudflare2026wr,aws2022vwr}.
-What is missing is evidence about which option works for this workload.
-Studies of flash crowds look at crowds that are often
-unforeseen~\cite{jung2002flash,wendell2011going}, while a result release is
-announced. The closest recent studies compare a database-only design with a
+control~\cite{welsh2001seda,elnikety2004gatekeeper,chen2005news}, and
+``virtual waiting rooms'' that queue visitors during surges, sold as
+products~\cite{cloudflare2026wr,aws2022vwr} and studied in WebQ, which tells
+users of an overloaded server how long to wait and checks with a token that
+they did~\cite{doshi2015webq}. What is missing is evidence about which option
+works for this workload. Flash-crowd studies characterise crowds and absorb
+them with caching~\cite{ari2003flash,jung2002flash,wendell2011going}, but
+these crowds are often unforeseen, while a result release is announced. The closest recent studies compare a database-only design with a
 Redis cache for university systems under a fixed number of users, one with a
 real database~\cite{putranto2026redis} and one with simulated
 delays~\cite{tofan2026cacheaside}; neither tests pre-computed results or
 waiting rooms, models students who refresh, or checks that the answers are
-correct. We found no peer-reviewed evaluation of waiting rooms at all.
+correct. To our knowledge, no study has compared waiting rooms with other
+designs under an announced surge of students who refresh.
 
 This paper gives boards measured evidence for four decisions: which
 architecture to use (Q1), whether to put a waiting room in front of it (Q2),

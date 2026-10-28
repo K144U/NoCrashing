@@ -2,7 +2,9 @@
 
 \textbf{Flash crowds.} Jung et al.\ characterised flash crowds and separated
 them from denial-of-service attacks~\cite{jung2002flash}; Wendell and Freedman
-measured four years of flash crowds in CoralCDN~\cite{wendell2011going}. These
+measured four years of flash crowds in CoralCDN~\cite{wendell2011going}, and
+Ari et al.\ absorbed modelled flash crowds with multi-level
+caching~\cite{ari2003flash}. These
 crowds are often unforeseen~\cite{wendell2011going}; a result release is a
 crowd whose time is announced in advance, which changes what a portal can
 prepare.
@@ -16,11 +18,16 @@ and probabilistic early recomputation (XFetch)~\cite{vattani2015xfetch}, are
 well studied for keys shared by many readers.
 
 \textbf{Overload control.} SEDA~\cite{welsh2001seda}, front-end admission
-control for e-commerce sites~\cite{elnikety2004gatekeeper}, and more recent
+control for e-commerce sites~\cite{elnikety2004gatekeeper}, adaptive admission
+control that detects flash crowds~\cite{chen2005news}, and more recent
 systems such as DAGOR~\cite{zhou2018dagor} and Breakwater~\cite{cho2020breakwater}
 shed or queue load inside or in front of servers. User-facing waiting rooms
-that issue tickets and positions are available as products~\cite{cloudflare2026wr,aws2022vwr};
-we found only vendor material about their behaviour.
+that issue tickets and positions are available as products~\cite{cloudflare2026wr,aws2022vwr}.
+The closest research system is WebQ~\cite{doshi2015webq}: two proxies hold
+users of an overloaded server in a virtual queue, tell them how long to wait,
+check with a cryptographic token that they did, and shape the load to the
+server's capacity. We add a comparison with other designs, queue order, lost
+tickets and refreshing students.
 
 \textbf{Retries.} Bronson et al.\ described \emph{metastable failures}, in which
 a system stays overloaded after the trigger that overloaded it is

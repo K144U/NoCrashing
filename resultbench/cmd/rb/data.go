@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -230,6 +232,30 @@ func runSample(args []string) error {
 			enc.Encode(cfg.Original(i))
 		}
 		shown++
+	}
+	return nil
+}
+
+func runFetch(args []string) error {
+	fs := flag.NewFlagSet("fetch", flag.ExitOnError)
+	timeout := fs.Duration("timeout", 10*time.Second, "request timeout")
+	if err := parse(fs, args); err != nil {
+		return err
+	}
+	c := &http.Client{Timeout: *timeout}
+	for _, u := range fs.Args() {
+		resp, err := c.Get(u)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(os.Stdout, resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode >= 400 {
+			return fmt.Errorf("%s: status %d", u, resp.StatusCode)
+		}
 	}
 	return nil
 }

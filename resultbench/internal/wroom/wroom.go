@@ -309,7 +309,12 @@ func NewHandler(room *Room, backend string) (*Handler, error) {
 		MaxIdleConnsPerHost: 4096,
 		IdleConnTimeout:     90 * time.Second,
 	}
-	p.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, _ error) {
+	p.ErrorHandler = func(w http.ResponseWriter, r *http.Request, _ error) {
+		if r.Context().Err() != nil {
+			// The user gave up while the backend was still working.
+			room.m.Counter("client_canceled").Inc()
+			return
+		}
 		room.m.Counter("proxy_errors").Inc()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)

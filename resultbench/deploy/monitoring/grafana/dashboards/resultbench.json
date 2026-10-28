@@ -1,0 +1,240 @@
+{
+  "uid": "resultbench",
+  "title": "ResultBench",
+  "schemaVersion": 39,
+  "refresh": "1s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Portal requests per second",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (rate(portal_requests[5s]))",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Portal responses per second by status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(portal_responses_200[5s]))",
+          "legendFormat": "200"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(portal_responses_404[5s]))",
+          "legendFormat": "404"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(portal_responses_425[5s]))",
+          "legendFormat": "425 not released"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(portal_responses_500[5s]))",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Portal latency p50 / p99",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(portal_request_seconds_bucket[5s])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(portal_request_seconds_bucket[5s])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Database queries and cache misses per second",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(portal_db_queries[5s]))",
+          "legendFormat": "db queries"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(portal_cache_miss_first_time_key[5s]))",
+          "legendFormat": "miss: first time key"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(portal_cache_miss_repeat_key[5s]))",
+          "legendFormat": "miss: repeat key"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(portal_cache_miss_concurrent_duplicate[5s]))",
+          "legendFormat": "miss: concurrent duplicate"
+        },
+        {
+          "refId": "E",
+          "expr": "sum(rate(portal_cache_hits[5s]))",
+          "legendFormat": "hits"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "In-flight requests and DB pool",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (portal_inflight)",
+          "legendFormat": "in flight {{instance}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance) (portal_db_pool_acquired)",
+          "legendFormat": "db conns {{instance}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Waiting room",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prom"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "wroom_queue_length",
+          "legendFormat": "queue length"
+        },
+        {
+          "refId": "B",
+          "expr": "wroom_active_sessions",
+          "legendFormat": "active sessions"
+        },
+        {
+          "refId": "C",
+          "expr": "rate(wroom_admitted[5s])",
+          "legendFormat": "admitted/s"
+        },
+        {
+          "refId": "D",
+          "expr": "rate(wroom_abandoned[5s])",
+          "legendFormat": "abandoned/s"
+        }
+      ]
+    }
+  ]
+}

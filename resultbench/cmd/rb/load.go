@@ -101,11 +101,14 @@ func printSummary(s surge.Summary) {
 
 // Calibration is written to capacity.json.
 type Calibration struct {
-	Target        string      `json:"target"`
-	DeadlineS     float64     `json:"deadline_s"`
-	Threshold     float64     `json:"threshold"`
-	CapacityUsers float64     `json:"capacity_users_per_s"`
-	Steps         []CalibStep `json:"steps"`
+	Target        string  `json:"target"`
+	DeadlineS     float64 `json:"deadline_s"`
+	Threshold     float64 `json:"threshold"`
+	CapacityUsers float64 `json:"capacity_users_per_s"`
+	// GeneratorLimited means the generator saturated before the design did,
+	// so the capacity is a lower bound.
+	GeneratorLimited bool        `json:"generator_limited"`
+	Steps            []CalibStep `json:"steps"`
 }
 
 // CalibStep is one constant-rate step.
@@ -129,6 +132,7 @@ func runCalibrate(args []string) error {
 	pauseS := fs.Float64("pause-s", 5, "seconds between steps")
 	deadline := fs.Float64("deadline", 2, "deadline in seconds")
 	threshold := fs.Float64("threshold", 0.99, "share of users that must get a correct result within the deadline")
+	refine := fs.Int("refine", 3, "bisection steps after the first failure")
 	ov := addSurgeOverrides(fs)
 	if err := parse(fs, args); err != nil {
 		return err
@@ -154,40 +158,65 @@ func runCalibrate(args []string) error {
 	ctx, stop := signalContext()
 	defer stop()
 	cal := Calibration{Target: strings.Join(base.Targets, ","), DeadlineS: *deadline, Threshold: *threshold}
-	fails := 0
-	inc := *step
-	for rate := *start; rate <= *maxRate && fails < 2; {
+	// Phase 1 grows the rate until two steps fail. Phase 2 bisects between the
+	// last passing and the first failing rate.
+	runStep := func(rate float64) (CalibStep, error) {
 		sc := base
 		sc.Name = fmt.Sprintf("calibrate-%g", rate)
 		sc.Surge.PeakUsersPerS = rate
 		sc.Generator.Seed = base.Generator.Seed + uint64(len(cal.Steps))
 		g, err := surge.New(sc, filepath.Join(*out, fmt.Sprintf("step-%03d", len(cal.Steps))), nil)
 		if err != nil {
-			return err
+			return CalibStep{}, err
 		}
 		s, err := g.Run(ctx)
 		if err != nil {
-			return err
+			return CalibStep{}, err
 		}
 		st := CalibStep{Rate: rate, SuccessWithin: s.UserSuccessWithin[key], LatencyP99Ms: s.LatencyAllMs.P99,
 			Saturated: s.Generator.Saturated}
-		st.Pass = st.SuccessWithin >= *threshold
+		st.Pass = st.SuccessWithin >= *threshold && !st.Saturated
 		cal.Steps = append(cal.Steps, st)
 		log.Printf("rate %.0f/s: success within %gs = %.4f, p99 = %.0f ms, pass=%v", rate, *deadline, st.SuccessWithin, st.LatencyP99Ms, st.Pass)
+		time.Sleep(time.Duration(*pauseS * float64(time.Second)))
+		return st, nil
+	}
+	fails, firstFail := 0, 0.0
+	inc := *step
+	for rate := *start; rate <= *maxRate && fails < 2; rate += inc {
+		st, err := runStep(rate)
+		if err != nil {
+			return err
+		}
 		if st.Saturated {
-			log.Printf("load generator saturated; stopping (capacity is at least %.0f/s)", cal.CapacityUsers)
+			log.Printf("load generator saturated at %.0f/s; capacity is at least %.0f/s", rate, cal.CapacityUsers)
+			cal.GeneratorLimited = true
 			break
 		}
 		if st.Pass {
 			fails = 0
 			cal.CapacityUsers = rate
-			rate += inc
 			inc *= *growth
 		} else {
+			if fails == 0 {
+				firstFail = rate
+			}
 			fails++
-			rate += inc
 		}
-		time.Sleep(time.Duration(*pauseS * float64(time.Second)))
+	}
+	lo, hi := cal.CapacityUsers, firstFail
+	for i := 0; i < *refine && hi > 0 && hi-lo > 0.05*lo; i++ {
+		mid := (lo + hi) / 2
+		st, err := runStep(mid)
+		if err != nil {
+			return err
+		}
+		if st.Pass {
+			lo = mid
+			cal.CapacityUsers = mid
+		} else {
+			hi = mid
+		}
 	}
 	log.Printf("capacity: %.0f users/s", cal.CapacityUsers)
 	return writeReport(filepath.Join(*out, "capacity.json"), cal)

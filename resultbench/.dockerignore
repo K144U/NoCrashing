@@ -1,0 +1,12 @@
+runs
+out*
+calibration
+bench
+analysis
+model
+monitor
+k6
+docs
+deploy
+**/__pycache__
+.venv

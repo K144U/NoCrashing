@@ -1,0 +1,35 @@
+# Design C1: every result is pre-computed into Redis before release. The read
+# path never touches PostgreSQL, which stays up only as the back office (for
+# materialization and corrections).
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    cpus: ${REDIS_CPUS:-1.0}
+    mem_limit: ${REDIS_MEM:-1500m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  portal:
+    image: resultbench:local
+    command: ["portal"]
+    environment:
+      RB_DESIGN: kv
+      RB_REDIS: redis:6379
+      RB_RELEASE_AT: ${RELEASE_AT_MS:-}
+      RB_MAX_WORKERS: ${MAX_WORKERS:-256}
+      RB_MAX_QUEUE: ${MAX_QUEUE:-4096}
+    cpus: ${PORTAL_CPUS:-1.0}
+    mem_limit: ${PORTAL_MEM:-512m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    depends_on:
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "rb", "fetch", "-timeout", "2s", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

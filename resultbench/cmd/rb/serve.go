@@ -58,6 +58,9 @@ func runPortal(args []string) error {
 	beta := fs.Float64("xfetch-beta", 1, "XFetch beta")
 	cancelOnDisc := fs.Bool("cancel-on-disconnect", false, "stop database work when the client disconnects")
 	workTimeout := fs.Duration("work-timeout", 30*time.Second, "maximum time spent on one request")
+	maxWorkers := fs.Int("max-workers", 256, "requests processed at once (0: no limit)")
+	maxQueue := fs.Int("max-queue", 4096, "requests waiting for a worker before answering 503 (0: no limit)")
+	pageCost := fs.Duration("page-cost", 0, "CPU time to build one page from the database (models framework and rendering overhead)")
 	if err := parse(fs, args); err != nil {
 		return err
 	}
@@ -71,6 +74,11 @@ func runPortal(args []string) error {
 	cfg := portal.Config{
 		Design: *design, ReleaseAt: releaseAt, CacheTTL: *ttl, TTLJitter: *jitter, Coalesce: *coalesce,
 		XFetch: *xfetch, XFetchBeta: *beta, CancelOnDisconnect: *cancelOnDisc, WorkTimeout: *workTimeout,
+		MaxWorkers: *maxWorkers, MaxQueue: *maxQueue,
+	}
+	if *design != portal.DesignKV {
+		cfg.PageCost = portal.NewPageCost(*pageCost)
+		log.Printf("page cost %s = %d hash iterations", *pageCost, cfg.PageCost.Iterations())
 	}
 	if *design != portal.DesignKV {
 		pool, err := db.Connect(ctx, *dsn, *maxConns)

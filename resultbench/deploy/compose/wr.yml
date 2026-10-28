@@ -1,0 +1,25 @@
+# Design D: a virtual waiting room in front of another design. Combine with
+# a.yml (D-A), c1.yml or c2.yml (D-C).
+services:
+  wr:
+    image: resultbench:local
+    command: ["waitingroom"]
+    environment:
+      RB_BACKEND: ${WR_BACKEND:-http://portal:8080}
+      RB_POLICY: ${WR_POLICY:-fifo}
+      RB_MODE: ${WR_MODE:-token}
+      RB_ADMIT_RATE: ${WR_ADMIT_RATE:-100}
+      RB_MAX_ACTIVE: ${WR_MAX_ACTIVE:-0}
+      RB_SESSION_TTL: ${WR_SESSION_TTL:-60s}
+      RB_ABANDON_AFTER: ${WR_ABANDON_AFTER:-30s}
+      RB_POLL: ${WR_POLL:-5s}
+      RB_SECRET: ${WR_SECRET:-resultbench}
+      RB_RELEASE_AT: ${RELEASE_AT_MS:-}
+    cpus: ${WR_CPUS:-0.25}
+    mem_limit: ${WR_MEM:-512m}
+    cpuset: "${SUT_CPUSET:-0,1}"
+    healthcheck:
+      test: ["CMD", "rb", "fetch", "-timeout", "2s", "http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

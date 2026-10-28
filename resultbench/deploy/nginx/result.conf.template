@@ -1,4 +1,4 @@
-# Design C2: serve /result?roll=<10 digits> from /data/results/<first 7 digits>/<roll>.json.
+# Design C2: serve /result?roll=<digits> from /data/results/<roll without its last 3 digits>/<roll>.json.
 #
 # open_file_cache keeps file handles for ${NGINX_OFC_VALID}. A corrected file
 # is written to a new inode and renamed into place, so Nginx can keep serving
@@ -8,7 +8,7 @@ open_file_cache max=200000 inactive=120s;
 open_file_cache_valid ${NGINX_OFC_VALID};
 
 map $arg_roll $shard {
-    "~^(?<s>[0-9]{7})[0-9]{3}$" $s;
+    "~^(?<s>[0-9]+)[0-9]{3}$" $s;
     default "";
 }
 

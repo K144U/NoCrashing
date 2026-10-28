@@ -62,6 +62,10 @@ type Config struct {
 	PollInterval time.Duration // suggested time between status checks
 	Secret       []byte        // HMAC key for token mode
 	Seed         uint64        // for the random policy
+	// GatePath limits admission to paths with this prefix (e.g. "/result");
+	// everything else (the page itself, images) passes straight through.
+	// Empty gates every path.
+	GatePath string
 }
 
 const (
@@ -335,6 +339,10 @@ func (h *Handler) Routes() *http.ServeMux {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if g := h.room.cfg.GatePath; g != "" && !strings.HasPrefix(req.URL.Path, g) {
+		h.proxy.ServeHTTP(w, req)
+		return
+	}
 	id := h.ticketFrom(req)
 	d := h.room.Arrive(id, time.Now())
 	if h.room.cfg.Mode == ModeToken && d.New {

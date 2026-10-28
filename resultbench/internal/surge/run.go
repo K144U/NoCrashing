@@ -116,7 +116,7 @@ func New(sc Scenario, dir string, logf func(string, ...any)) (*Generator, error)
 		logf = func(string, ...any) {}
 	}
 	return &Generator{
-		sc: sc, or: oracle.Oracle{Cfg: sc.Dataset.Config()}, rec: rec, logf: logf,
+		sc: sc, or: oracle.Oracle{Cfg: sc.Dataset.Config(), RollOnly: sc.Oracle == "roll_only"}, rec: rec, logf: logf,
 		client:  &http.Client{Transport: tr, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
 		samples: map[int64][3]float64{}, netErrors: map[string]int64{},
 	}, nil
@@ -193,6 +193,7 @@ func (g *Generator) spawn(ctx, userCtx context.Context, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(tick)
 	defer ticker.Stop()
 	last := time.Now()
+	carry := 0.0
 	for {
 		select {
 		case <-ctx.Done():
@@ -204,7 +205,15 @@ func (g *Generator) spawn(ctx, userCtx context.Context, wg *sync.WaitGroup) {
 			}
 			dt := now.Sub(last).Seconds()
 			last = now
-			n := poisson(rng, sc.Surge.Rate(t)*dt)
+			expected := sc.Surge.Rate(t) * dt
+			var n int
+			if sc.Surge.Arrivals == "even" {
+				carry += expected
+				n = int(carry)
+				carry -= float64(n)
+			} else {
+				n = poisson(rng, expected)
+			}
 			for i := 0; i < n; i++ {
 				roll := keys.Next()
 				if sc.Generator.MaxUsers > 0 && g.active.Load() >= int64(sc.Generator.MaxUsers) {
@@ -216,6 +225,9 @@ func (g *Generator) spawn(ctx, userCtx context.Context, wg *sync.WaitGroup) {
 				wg.Add(1)
 				// Spread arrivals within the tick so they are not synchronised.
 				offset := time.Duration(rng.Int64N(int64(tick)))
+				if sc.Surge.Arrivals == "even" {
+					offset = time.Duration(i) * tick / time.Duration(n)
+				}
 				go func() {
 					defer wg.Done()
 					defer g.active.Add(-1)

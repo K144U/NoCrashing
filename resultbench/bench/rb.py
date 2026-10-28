@@ -564,6 +564,8 @@ def cmd_run(args) -> None:
         set_path(sc, "surge.peak_users_per_s", peak)
     opts = {"env": parse_sets(args.env), "fraction": args.fraction, "invalidate": args.invalidate,
             "multiple": args.multiple}
+    if args.fault:
+        opts["fault"] = yaml.safe_load(args.fault)
     name = args.name or f"{args.design}-x{args.multiple or 'abs'}-{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}"
     run_dir = runs_dir() / args.experiment / name
     meta = run_one(args.design, sc, run_dir, opts)
@@ -734,6 +736,7 @@ def main() -> None:
     r.add_argument("--env", action="append", default=[], help="compose env override, e.g. WR_POLICY=random")
     r.add_argument("--fraction", type=float, default=1.0, help="share pre-computed before release")
     r.add_argument("--invalidate", type=lambda s: s.lower() == "true", default=True)
+    r.add_argument("--fault", help='fault to inject, e.g. "{kind: kill, service: redis, at_s: 10, duration_s: 20}"')
     r.add_argument("--experiment", default="adhoc")
     r.add_argument("--name")
     r.set_defaults(fn=cmd_run)

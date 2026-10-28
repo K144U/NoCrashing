@@ -1,0 +1,66 @@
+# Result-in-a-box: the reference deployment from plan section 8.2.
+#
+# Pre-computed static result files served by Nginx, a release-time gate, and
+# an optional waiting room (profile "queue"). See README.md for the steps.
+name: resultbox
+
+volumes:
+  results:
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    environment:
+      OFC_VALID: ${OFC_VALID:-10s}
+      RESULT_MAX_AGE: ${RESULT_MAX_AGE:-60}
+      RATE_PER_IP: ${RATE_PER_IP:-5r/s}
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/result-box.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./site:/srv/site:ro
+      - results:/data:ro
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Creates /data/released at RELEASE_AT_MS (Unix milliseconds). Until then
+  # every lookup answers "not released yet" without touching any file.
+  releaser:
+    image: resultbench:local
+    command: ["release", "-flag", "/data/released", "-require-at"]
+    environment:
+      RB_AT: ${RELEASE_AT_MS:-}
+    volumes:
+      - results:/data
+    restart: unless-stopped
+
+  # Optional waiting room in front of the web server: docker compose --profile queue up -d
+  queue:
+    image: resultbench:local
+    profiles: [queue]
+    command: ["waitingroom"]
+    environment:
+      RB_BACKEND: http://web:8080
+      RB_POLICY: ${QUEUE_POLICY:-random}
+      RB_MODE: token
+      RB_ADMIT_RATE: ${QUEUE_ADMIT_RATE:-500}
+      RB_POLL: ${QUEUE_POLL:-10s}
+      RB_SECRET: ${QUEUE_SECRET:-}
+      RB_RELEASE_AT: ${RELEASE_AT_MS:-}
+    ports:
+      - "${QUEUE_PORT:-8090}:8080"
+    restart: unless-stopped
+
+  # One-off: publish the results CSV. docker compose run --rm publish
+  publish:
+    image: resultbench:local
+    profiles: [tools]
+    command: ["publish-csv", "-in", "/input/results.csv", "-dir", "/data/results"]
+    volumes:
+      - results:/data
+      - ${RESULTS_CSV_DIR:-./sample}:/input:ro

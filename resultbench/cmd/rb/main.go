@@ -23,6 +23,7 @@ var commands = map[string]command{
 	"surge":       {runSurge, "run a result-day load scenario"},
 	"calibrate":   {runCalibrate, "find a design's saturation point with step load"},
 	"sample":      {runSample, "print sample records from the synthetic dataset"},
+	"publish-csv": {runPublishCSV, "publish a board's results CSV as static files (result-in-a-box)"},
 	"fetch":       {runFetch, "GET a URL and print the body (for collecting /stats inside the network)"},
 }
 

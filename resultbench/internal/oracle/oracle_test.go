@@ -65,3 +65,19 @@ func TestClassify(t *testing.T) {
 		t.Fatalf("queued status not parsed: %+v", st)
 	}
 }
+
+func TestRollOnly(t *testing.T) {
+	cfg := dataset.Default()
+	cfg.N = 100
+	o := Oracle{Cfg: cfg, RollOnly: true}
+	real := []byte(`{"roll":555123,"name":"X","marks":[{"code":"A","marks":50}],"total":50}`)
+	if got, _ := o.Classify(200, real, 555123, false); got != Correct {
+		t.Fatalf("roll-only: got %s", got)
+	}
+	if got, _ := o.Classify(200, real, 555124, false); got != Wrong {
+		t.Fatalf("roll-only other roll: got %s", got)
+	}
+	if got, _ := o.Classify(404, nil, cfg.Roll(5), false); got != CorrectNotFound {
+		t.Fatalf("roll-only 404: got %s", got)
+	}
+}

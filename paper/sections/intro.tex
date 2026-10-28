@@ -18,7 +18,7 @@ checker over \emph{wrong} results rather than slow ones~\cite{icir2025waec}.
 The tools that could prevent these failures are well known: caching or
 pre-generating dynamic pages~\cite{challenger1999scalable,labrinidis2000webview},
 protecting caches against stampedes~\cite{vattani2015xfetch,nishtala2013memcache},
-admission control under overload~\cite{welsh2001seda,elnikety2004gatekeeper},
+admission control under overload~\cite{welsh2001seda,elnikety2004gatekeeper,chen2005news},
 and avoiding retries that keep an overloaded system
 down~\cite{bronson2021metastable,huang2022metastable}. Companies also sell
 ``virtual waiting rooms'' that hold excess visitors in a queue during traffic
@@ -31,8 +31,10 @@ prototype in which database
 and cache latencies are simulated by fixed delays~\cite{tofan2026cacheaside}.
 Neither evaluates pre-computed serving or waiting rooms, models an open-loop
 surge of arriving students who refresh, or checks the answers returned under
-load. We found no peer-reviewed evaluation of
-user-facing waiting rooms at all.
+load. WebQ evaluated a virtual queue in front of an overloaded web
+server~\cite{doshi2015webq}, but, to our knowledge, no study has compared
+waiting rooms with other designs under an announced surge of students who
+refresh.
 
 This paper asks four questions about portals that publish read-only results at
 a pre-announced time:
@@ -50,8 +52,8 @@ parameterised model of how students refresh, and an oracle that checks every
 response against ground truth;
 (2)~a controlled comparison of database-backed, multi-mirror, cache-aside,
 pre-computed key-value and pre-computed static designs;
-(3)~to our knowledge, the first controlled evaluation of virtual waiting rooms,
-including queue order and ticket handling;
+(3)~a controlled comparison of virtual waiting rooms with the other designs
+under a result-day surge, including queue order and ticket handling;
 (4)~measurements of correctness failures that only appear on result day;
 and (5)~a decomposition of cache-aside misses that shows why the usual
 stampede defences do little for per-student keys.

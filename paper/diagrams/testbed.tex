@@ -1,0 +1,22 @@
+% Testbed (Section IV). Included by sections/method.tex.
+\begin{tikzpicture}[
+  node distance=5mm and 10mm,
+  blk/.style={draw, rounded corners=2pt, align=center, font=\scriptsize, inner sep=3pt,
+              fill=white, text width=25mm},
+  arr/.style={-{Stealth[length=1.6mm]}, semithick},
+  lab/.style={font=\tiny, inner sep=1pt, align=center},
+]
+  \node[blk, fill=gray!12] (gen) {\textbf{Load generator}\\open-loop arrivals,\\student model\\[1pt]\tiny 12 hardware threads};
+  \node[blk, fill=blue!8, right=of gen] (sut) {\textbf{System under test}\\one design\\[1pt]\tiny 2 hardware threads (one core)};
+  \node[blk, fill=green!10, below=of gen] (orc) {\textbf{Oracle}\\expected result for any\\roll number, from the seed};
+  \node[blk, fill=red!8, below=of sut] (res) {\textbf{Resource sampler}\\CPU and memory of\\every container};
+  \node[blk, fill=yellow!20, below=of orc] (log) {\textbf{Per-request log}\\correct, stale, wrong,\\missing, timeout, \ldots};
+  \node[blk, fill=orange!12, below=of res] (ana) {\textbf{Analysis}\\medians, 95\% intervals,\\tables and figures};
+  \draw[arr] ([yshift=1.5mm]gen.east) -- node[lab, above] {requests} ([yshift=1.5mm]sut.west);
+  \draw[arr] ([yshift=-1.5mm]sut.west) -- node[lab, below] {responses} ([yshift=-1.5mm]gen.west -| gen.east);
+  \draw[arr] (gen) -- node[lab, left] {check\\each} (orc);
+  \draw[arr] (sut) -- (res);
+  \draw[arr] (orc) -- (log);
+  \draw[arr] (log) -- (ana);
+  \draw[arr] (res) -- (ana);
+\end{tikzpicture}

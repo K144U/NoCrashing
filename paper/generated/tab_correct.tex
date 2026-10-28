@@ -1,0 +1,24 @@
+\begin{table}[t]
+\caption{Correctness at 1$\times$ load, totals over 3 runs. Top: corrections for 1\% of students published 30\,s after release; \emph{answers} are those given to corrected students after that time. Bottom: release with only 90\% of results pre-computed.}
+\label{tab:correct}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lp{2.9cm}rrr@{}}
+\toprule
+Design & Condition & Answers & Stale & Last stale (s) \\
+\midrule
+A & database read every time & 90 & 1 & 0.07 \\
+B0 & cache entries deleted & 92 & 0 & -- \\
+B0 & no invalidation (TTL 10 min) & 94 & 4 & 10.89 \\
+C1 & Redis entries rewritten & 90 & 1 & 0.07 \\
+C2 & files rewritten, Nginx cache 1\,s & 90 & 1 & 0.07 \\
+C2 & files rewritten, Nginx cache 30\,s & 90 & 5 & 13.69 \\
+\midrule
+Design & & Written late & Took (s) & Missing \\
+\midrule
+C1 & release with 90\% ready & 20,058 & 0.08 & 1 \\
+C2 & release with 90\% ready & 20,058 & 1.63 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}

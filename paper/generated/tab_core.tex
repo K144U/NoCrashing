@@ -1,0 +1,20 @@
+\begin{table}[t]
+\caption{Students served correctly within 5\,s (\%) and CPU-seconds per 1000 served, median of 3 runs}
+\label{tab:core}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{1$\times$} & \multicolumn{2}{c}{2$\times$} & \multicolumn{2}{c}{5$\times$} & \multicolumn{2}{c}{10$\times$} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+Design & 5\,s \% & CPU & 5\,s \% & CPU & 5\,s \% & CPU & 5\,s \% & CPU \\
+\midrule
+A & 100.0 & 5.9 & 30.8 & 6.1 & 7.7 & 6.3 & 1.4 & 6.8 \\
+M & 100.0 & 6.2 & 30.5 & 6.5 & 6.8 & 8.9 & 1.4 & 11.1 \\
+B0 & 70.8 & 6.3 & 19.6 & 6.9 & 2.8 & 7.7 & 0.9 & 8.4 \\
+C1 & 100.0 & 1.0 & 100.0 & 0.6 & 100.0 & 0.4 & 100.0 & 0.3 \\
+C2 & 100.0 & 0.5 & 100.0 & 0.3 & 100.0 & 0.2 & 100.0 & 0.1 \\
+\bottomrule
+\end{tabular}
+\end{table}

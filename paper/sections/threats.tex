@@ -1,6 +1,7 @@
 \subsection{Threats to validity}
+\label{sec:threats}
 
-\textbf{One machine, compressed time.} All runs used one 4-core machine and a
+\textbf{One machine, compressed time.} All runs used one 8-core desktop machine and a
 surge compressed from tens of minutes to \SI{90}{s}. We therefore report load
 as multiples of a calibrated capacity and compare designs relative to each
 other; absolute rates do not transfer to production hardware. The
@@ -13,9 +14,10 @@ on result day. Patience, refresh probabilities and delays are assumptions;
 Section~\ref{sec:refresh} shows how much the conclusions depend on them.
 
 \textbf{Modelled server cost.} The \SI{5}{ms} page-building cost stands in for
-the framework overhead of real portal stacks. It favours designs that avoid
-building pages at request time; the qualitative ordering of designs does not
-depend on it, but the size of the gap between A and B does.
+the framework overhead of real portal stacks. We did not vary it in this
+paper. It favours designs that avoid building pages at request time: a lower
+value would make A, M and B cheaper per page and raise A's capacity, while C1
+and C2 never pay it.
 
 \textbf{Scope.} We do not model login or captcha services, bots, denial of
 service, DNS, or a real CDN, each of which has caused real result-day outages.

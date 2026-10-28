@@ -1,0 +1,69 @@
+% Read paths of the designs (Section III). Included by sections/designs.tex.
+\tikzset{
+  box/.style={draw, rounded corners=1.5pt, minimum height=7mm, minimum width=13mm,
+              inner sep=2pt, align=center, font=\footnotesize, fill=white},
+  stu/.style={box, fill=gray!12},
+  app/.style={box, fill=blue!8},
+  db/.style={draw, cylinder, shape border rotate=90, aspect=0.22, minimum height=8mm,
+             minimum width=14mm, inner sep=1pt, align=center, font=\footnotesize, fill=orange!12},
+  kv/.style={db, fill=red!10},
+  files/.style={box, fill=green!10, double copy shadow={shadow xshift=1.2pt, shadow yshift=1.2pt}},
+  wr/.style={box, fill=yellow!20},
+  req/.style={-{Stealth[length=1.8mm]}, semithick},
+  pre/.style={-{Stealth[length=1.8mm]}, semithick, dashed, gray!60!black},
+  lab/.style={font=\scriptsize, inner sep=1pt, fill=white},
+}
+\newcommand{\panel}[2]{\begin{minipage}[b]{0.325\textwidth}\centering
+  \begin{tikzpicture}[node distance=4mm and 6mm]#2\end{tikzpicture}\par\vspace{2pt}
+  {\footnotesize #1}\end{minipage}}
+\centering
+\panel{(A) Database-backed: every request\\builds the page (+5\,ms CPU)}{%
+  \node[stu] (s) {Students};
+  \node[app, right=of s] (a) {App};
+  \node[db, right=of a] (d) {Postgre-\\SQL};
+  \draw[req] (s) -- (a); \draw[req] (a) -- (d);
+}\hfill
+\panel{(M) Mirrors: two copies of A,\\each with half the CPU}{%
+  \node[stu] (s) {Students};
+  \node[app, right=of s, yshift=5mm] (a1) {App 1};
+  \node[app, right=of s, yshift=-5mm] (a2) {App 2};
+  \node[db, right=of a1, minimum height=6.5mm] (d1) {DB 1};
+  \node[db, right=of a2, minimum height=6.5mm] (d2) {DB 2};
+  \draw[req] (s) -- (a1); \draw[req] (s) -- (a2);
+  \draw[req] (a1) -- (d1); \draw[req] (a2) -- (d2);
+}\hfill
+\panel{(B) Cache-aside: Redis first,\\database only on a miss}{%
+  \node[stu] (s) {Students};
+  \node[app, right=of s] (a) {App};
+  \node[kv, right=of a, yshift=6mm, minimum height=6.5mm] (r) {Redis};
+  \node[db, right=of a, yshift=-6mm, minimum height=6.5mm] (d) {Postgre-\\SQL};
+  \draw[req] (s) -- (a);
+  \draw[req] (a.north east) -- node[lab, above left=0pt] {1: look up} (r.west);
+  \draw[req] (a.south east) -- node[lab, below left=0pt] {2: miss} (d.west);
+}
+
+\vspace{4mm}
+\panel{(C1) Results pre-computed into\\Redis before release}{%
+  \node[stu] (s) {Students};
+  \node[app, right=of s] (a) {App};
+  \node[kv, right=of a] (r) {Redis};
+  \node[db, above=5mm of r, minimum height=6.5mm, fill=orange!6] (d) {back office};
+  \draw[req] (s) -- (a); \draw[req] (a) -- (r);
+  \draw[pre] (d) -- node[lab, left=1pt] {before release} (r);
+}\hfill
+\panel{(C2) One pre-computed file per\\student, served by Nginx}{%
+  \node[stu] (s) {Students};
+  \node[app, right=of s] (n) {Nginx};
+  \node[files, right=of n] (f) {JSON\\files};
+  \node[db, above=5mm of f, minimum height=6.5mm, fill=orange!6] (d) {back office};
+  \draw[req] (s) -- (n); \draw[req] (n) -- (f);
+  \draw[pre] (d) -- node[lab, left=1pt] {before release} (f);
+}\hfill
+\panel{(D) Waiting room in front\\of A or C1}{%
+  \node[stu] (s) {Students};
+  \node[wr, right=8mm of s] (w) {Waiting\\room};
+  \node[app, right=of w] (b) {A or C1};
+  \draw[req] ([yshift=1.5mm]s.east) -- node[lab, above=1pt] {ticket} ([yshift=1.5mm]w.west);
+  \draw[pre] ([yshift=-1.5mm]w.west) -- node[lab, below=1pt] {position} ([yshift=-1.5mm]s.east);
+  \draw[req] (w) -- node[lab, above=1pt] {admit} (b);
+}

@@ -1,32 +1,37 @@
 \section{Introduction}
 
-When an Indian examination board declares results, lakhs of students open the
-result website within the same few minutes. The release time is announced in
-advance, almost every request is a look-up of one roll number, and the data
-does not change while students read it. It is about as simple as a web
-workload can be. Yet result portals keep failing on result day. The chairman
+When an Indian examination board declares results, lakhs of students try to
+open the result website at the same time~\cite{ht2021ssc}. The release time is
+announced in advance, almost every request asks for one roll number, and the
+results do not change while students read them. Few web workloads are simpler.
+Yet result websites keep failing on result day. The chairman
 of JEE Advanced 2016 described the portal receiving about \num{10000} requests
 per second against a server that could hold \num{2000}~\cite{pagalguy2016jee};
 on Maharashtra SSC result day in 2021 schools reported that at least half of
-their students could not see results until evening, and the state's education
-minister apologised~\cite{ht2021ssc}. The problem is not Indian alone: Kenya's
-examination council reported up to \num{300000} hits per second on its results
-portal~\cite{standard2025knec}, and in 2025 WAEC in Nigeria withdrew its result
+their students could not see results until evening~\cite{ht2021ssc}, and the
+state's education minister apologised~\cite{careerindia2021ssc}. The problem is
+not Indian alone: Kenya's examination council reported up to \num{300000} hits
+per second on its results portal~\cite{knec2025x,k24knec2025}, and in 2025 WAEC
+in Nigeria withdrew its result
 checker over \emph{wrong} results rather than slow ones~\cite{icir2025waec}.
 
-The engineering ingredients that could prevent these failures are well
-known: caching dynamic pages and pre-generating them~\cite{challenger1999scalable,labrinidis2000webview},
+The tools that could prevent these failures are well known: caching or
+pre-generating dynamic pages~\cite{challenger1999scalable,labrinidis2000webview},
 protecting caches against stampedes~\cite{vattani2015xfetch,nishtala2013memcache},
 admission control under overload~\cite{welsh2001seda,elnikety2004gatekeeper},
-and the danger of retries that keep an overloaded system down~\cite{bronson2021metastable,huang2022metastable}.
-Commercial ``virtual waiting rooms'' are sold for exactly this kind of
-event~\cite{cloudflare2026wr,aws2026vwr}. What is missing is a measured,
-like-for-like comparison of these options for this workload. The closest
-recent studies compare a database-backed and a Redis cache-aside design for a
-university portal under fixed concurrency~\cite{putranto2026redis,tofan2026cacheaside};
-they do not evaluate pre-computed serving or waiting rooms, do not model a
-release-time surge or students who refresh, and do not check that the
-answers returned are correct. We found no peer-reviewed evaluation of
+and avoiding retries that keep an overloaded system
+down~\cite{bronson2021metastable,huang2022metastable}. Companies also sell
+``virtual waiting rooms'' that hold excess visitors in a queue during traffic
+surges~\cite{cloudflare2026wr,aws2022vwr}. What is missing is a measured,
+like-for-like comparison of these options for result portals. The closest
+recent studies compare a database-only design with Redis cache-aside for
+university academic systems under a fixed number of concurrent users, one with
+a real PostgreSQL database and Redis~\cite{putranto2026redis} and one as a
+prototype in which database
+and cache latencies are simulated by fixed delays~\cite{tofan2026cacheaside}.
+Neither evaluates pre-computed serving or waiting rooms, models an open-loop
+surge of arriving students who refresh, or checks the answers returned under
+load. We found no peer-reviewed evaluation of
 user-facing waiting rooms at all.
 
 This paper asks four questions about portals that publish read-only results at

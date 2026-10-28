@@ -2,12 +2,24 @@
 \label{sec:designs}
 
 Every design serves \texttt{GET /result?roll=$n$} with the same JSON body, uses
-the same synthetic data, and gets the same budget of two CPU cores for the read
-path (Table~\ref{tab:designs}). Before the announced release time every design
-answers ``not released'' without touching result data.
+the same synthetic data, and gets the same budget of two CPUs for the read
+path (Table~\ref{tab:designs}). Fig.~\ref{fig:designs} shows how each design
+answers a request. Before the announced release time every design answers
+``not released'' without touching result data.
+
+\begin{figure*}[t]
+\input{diagrams/designs.tex}
+\caption{How each design answers a student's request. Solid arrows are on the
+request path; dashed arrows happen before release (C1, C2) or tell a queued
+student their position (D). The waiting room admits students at 80\% of its
+backend's calibrated capacity.}
+\label{fig:designs}
+\end{figure*}
 
 \begin{table}[t]
-\caption{Designs and their share of the 2-core budget}
+\caption{Designs and their share of the 2-CPU budget. C1, C2 and the D-C
+designs also run an idle back-office PostgreSQL limited to 0.25 CPU; its use is
+counted in cost.}
 \label{tab:designs}
 \centering
 \footnotesize
@@ -17,7 +29,7 @@ answers ``not released'' without touching result data.
 ID & Read path & CPUs \\
 \midrule
 A & App queries PostgreSQL (4-table join), builds the page & 1 + 1 \\
-M & Two independent copies of A (``mirror links''); students pick one and may switch after an error & 2$\times$(0.5+0.5) \\
+M & Two independent copies of A (``mirror links''); each student picks one at random and, on retry, switches with probability 0.5 & 2$\times$(0.5+0.5) \\
 B0 & Redis cache-aside in front of A & 0.75+0.75+0.5 \\
 B1 & B0 + request coalescing per key & same \\
 B2 & B0 + XFetch~\cite{vattani2015xfetch} + 10\% TTL jitter & same \\
@@ -26,25 +38,32 @@ C1 & All results pre-computed into Redis; no database on the read path & 1 + 1 \
 C2 & One pre-computed JSON file per student, served by Nginx & 2 \\
 D-A & Waiting room in front of A & 0.25 + 0.875 + 0.875 \\
 D-C1 & Waiting room in front of C1 & 0.25 + 0.875 + 0.875 \\
+D-C2 & Waiting room in front of C2 (not used in this paper) & 0.25 + 1.75 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Server model.} All application designs run the same Go server with a
-pool of 256 workers and a queue of 4096 waiting requests, beyond which it
-answers 503, as PHP-FPM or Apache would. Without such a bound, our
-database-backed portal was killed for exceeding its memory limit during
-overload. Building one page from the database costs a configurable amount of
-CPU that stands for framework, session and rendering overhead; we use
-\SI{5}{ms}. A Go server alone spends microseconds per page, which would make
-design~A far cheaper than real portal stacks. Pre-computed designs store the
-finished page and never pay this cost; cache-aside pays it on every miss.
+\textbf{Server model.} All designs that run application code use the same Go
+server. It works on at most 256 requests at once and lets at most 4096 more
+wait; beyond that it answers 503. Real web servers are limited in the same
+way: Apache, for example, serves at most \texttt{MaxRequestWorkers} requests at
+once (256 by default in its prefork mode) and queues further connections up to
+a fixed backlog~\cite{apache2026mpm}. In early tests without such a limit,
+design~A took on work until it was killed for exceeding its memory limit.
+
+Our server is a small Go program, while real portals run full web frameworks
+with sessions and templates. To stand in for that work, every page built from
+the database costs \SI{5}{ms} of CPU. Pre-computed designs store finished
+pages and never pay this cost; cache-aside pays it on every miss. The value
+\SI{5}{ms} is an assumption (Section~\ref{sec:threats}).
 
 \textbf{Waiting room.} Our waiting room admits students at a fixed rate (80\%
 of the backend's calibrated capacity) and tells the others their position.
 Two queue policies are compared: first-come-first-served (FIFO), and a
 lottery that shuffles everyone who arrived before release, as some products
-offer~\cite{cloudflare2026wr}. Two ticket implementations are compared: a
+offer~\cite{cloudflare2026queue}. Two ticket implementations are compared: a
 \emph{naive} ticket held only in the page (lost when the student presses
 refresh) and a \emph{token} kept in a signed cookie (kept on refresh).
-Tickets whose holder has not polled for 30\,s are skipped.
+Tickets whose holder has not polled for 30\,s are skipped. An admitted student
+may use the backend for 60\,s; the waiting room limits neither how many
+admitted students are active at once nor how many requests each one sends.

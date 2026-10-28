@@ -3,11 +3,12 @@
 \textbf{Flash crowds.} Jung et al.\ characterised flash crowds and separated
 them from denial-of-service attacks~\cite{jung2002flash}; Wendell and Freedman
 measured four years of flash crowds in CoralCDN~\cite{wendell2011going}. These
-studies characterise unannounced crowds; a result release is a crowd whose
-time is known in advance, which changes what a portal can prepare.
+crowds are often unforeseen~\cite{wendell2011going}; a result release is a
+crowd whose time is announced in advance, which changes what a portal can
+prepare.
 
-\textbf{Caching and pre-computation.} Challenger et al.\ cached dynamic pages
-for the 1998 Olympics web site~\cite{challenger1999scalable}, and Labrinidis
+\textbf{Caching and pre-computation.} Challenger et al.\ kept cached dynamic
+pages consistent with the data they were built from~\cite{challenger1999scalable}, and Labrinidis
 and Roussopoulos compared serving web views virtually, materialised in the
 database, and materialised at the web server~\cite{labrinidis2000webview}.
 Cache stampedes and their defences, such as leases~\cite{nishtala2013memcache}
@@ -18,16 +19,24 @@ well studied for keys shared by many readers.
 control for e-commerce sites~\cite{elnikety2004gatekeeper}, and more recent
 systems such as DAGOR~\cite{zhou2018dagor} and Breakwater~\cite{cho2020breakwater}
 shed or queue load inside or in front of servers. User-facing waiting rooms
-that issue tickets and positions are available as products~\cite{cloudflare2026wr,aws2026vwr};
+that issue tickets and positions are available as products~\cite{cloudflare2026wr,aws2022vwr};
 we found only vendor material about their behaviour.
 
-\textbf{Retries.} Retries are the most common mechanism that keeps systems in
-a metastable failed state after the trigger is gone~\cite{bronson2021metastable,huang2022metastable,beyer2016sre}.
-We measure the effect of human refreshes, not automated retries.
+\textbf{Retries.} Bronson et al.\ described \emph{metastable failures}, in which
+a system stays overloaded after the trigger that overloaded it is
+gone~\cite{bronson2021metastable}. In a study of 22 such failures from public
+incident reports, retries kept the system down in more than half of
+them~\cite{huang2022metastable}, and operators are warned that retries can
+destabilize a system~\cite{beyer2016sre}. We measure the effect of students
+pressing refresh, not of automated retries.
 
-\textbf{Portal load studies.} Recent studies of university academic portals
-compare a plain database design against Redis cache-aside under fixed
-concurrency~\cite{putranto2026redis,tofan2026cacheaside}. Our study adds
+\textbf{Portal load studies.} Recent studies of university academic systems
+compare a plain database design against Redis cache-aside under a fixed number
+of concurrent users: Putranto and Pinandito with a hosted PostgreSQL database,
+Redis and up to \num{10000} JMeter users for \SI{60}{s}~\cite{putranto2026redis},
+and Tofan et al.\ in a
+prototype whose database and cache latencies are fixed
+delays~\cite{tofan2026cacheaside}. Our study adds
 pre-computed and waiting-room designs, an open-loop release-time surge with
 refreshing students~\cite{schroeder2006open}, correctness checking, and
 resource cost, and follows established guidance for reproducible performance

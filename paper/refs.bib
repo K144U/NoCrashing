@@ -12,6 +12,7 @@
   author    = {Lexiang Huang and Matthew Magnusson and Abishek Bangalore Muralikrishna and Salman Estyak and Rebecca Isaacs and Abutalib Aghayev and Timothy Zhu and Aleksey Charapko},
   title     = {Metastable Failures in the Wild},
   booktitle = {Proc. 16th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {73--90},
   year      = {2022}
 }
 
@@ -19,7 +20,9 @@
   author    = {Nathan Bronson and Abutalib Aghayev and Aleksey Charapko and Timothy Zhu},
   title     = {Metastable Failures in Distributed Systems},
   booktitle = {Proc. Workshop on Hot Topics in Operating Systems (HotOS)},
-  year      = {2021}
+  pages     = {221--227},
+  year      = {2021},
+  doi       = {10.1145/3458336.3465286}
 }
 
 @article{vattani2015xfetch,
@@ -34,7 +37,7 @@
 }
 
 @inproceedings{nishtala2013memcache,
-  author    = {Rajesh Nishtala and others},
+  author    = {Rajesh Nishtala and Hans Fugal and Steven Grimm and Marc Kwiatkowski and Herman Lee and Harry C. Li and Ryan McElroy and Mike Paleczny and Daniel Peek and Paul Saab and David Stafford and Tony Tung and Venkateshwaran Venkataramani},
   title     = {Scaling Memcache at {Facebook}},
   booktitle = {Proc. 10th USENIX Symposium on Networked Systems Design and Implementation (NSDI)},
   pages     = {385--398},
@@ -45,35 +48,44 @@
   author    = {Matt Welsh and David Culler and Eric Brewer},
   title     = {{SEDA}: An Architecture for Well-Conditioned, Scalable Internet Services},
   booktitle = {Proc. 18th ACM Symposium on Operating Systems Principles (SOSP)},
-  year      = {2001}
+  pages     = {230--243},
+  year      = {2001},
+  doi       = {10.1145/502034.502057}
 }
 
 @inproceedings{elnikety2004gatekeeper,
   author    = {Sameh Elnikety and Erich Nahum and John Tracey and Willy Zwaenepoel},
   title     = {A Method for Transparent Admission Control and Request Scheduling in E-Commerce Web Sites},
   booktitle = {Proc. 13th International World Wide Web Conference (WWW)},
-  year      = {2004}
+  pages     = {276--286},
+  year      = {2004},
+  doi       = {10.1145/988672.988710}
 }
 
 @inproceedings{cho2020breakwater,
   author    = {Inho Cho and Ahmed Saeed and Joshua Fried and Seo Jin Park and Mohammad Alizadeh and Adam Belay},
   title     = {Overload Control for $\mu$s-scale {RPCs} with {Breakwater}},
   booktitle = {Proc. 14th USENIX Symposium on Operating Systems Design and Implementation (OSDI)},
+  pages     = {299--314},
   year      = {2020}
 }
 
 @inproceedings{zhou2018dagor,
-  author    = {Hao Zhou and others},
+  author    = {Hao Zhou and Ming Chen and Qian Lin and Yong Wang and Xiaobin She and Sifan Liu and Rui Gu and Beng Chin Ooi and Junfeng Yang},
   title     = {Overload Control for Scaling {WeChat} Microservices},
   booktitle = {Proc. ACM Symposium on Cloud Computing (SoCC)},
-  year      = {2018}
+  pages     = {149--161},
+  year      = {2018},
+  doi       = {10.1145/3267809.3267823}
 }
 
 @inproceedings{jung2002flash,
   author    = {Jaeyeon Jung and Balachander Krishnamurthy and Michael Rabinovich},
   title     = {Flash Crowds and Denial of Service Attacks: Characterization and Implications for {CDNs} and Web Sites},
   booktitle = {Proc. 11th International World Wide Web Conference (WWW)},
-  year      = {2002}
+  pages     = {293--304},
+  year      = {2002},
+  doi       = {10.1145/511446.511485}
 }
 
 @inproceedings{wendell2011going,
@@ -90,7 +102,8 @@
   title     = {{WebView} Materialization},
   booktitle = {Proc. ACM SIGMOD International Conference on Management of Data},
   pages     = {367--378},
-  year      = {2000}
+  year      = {2000},
+  doi       = {10.1145/342009.335430}
 }
 
 @inproceedings{challenger1999scalable,
@@ -98,21 +111,26 @@
   title     = {A Scalable System for Consistently Caching Dynamic Web Data},
   booktitle = {Proc. IEEE INFOCOM},
   pages     = {294--303},
-  year      = {1999}
+  year      = {1999},
+  doi       = {10.1109/INFCOM.1999.749295}
 }
 
 @article{papadopoulos2019methodological,
-  author  = {Alessandro Vittorio Papadopoulos and others},
+  author  = {Alessandro Vittorio Papadopoulos and Laurens Versluis and Andr{\'e} Bauer and Nikolas Herbst and J{\'o}akim von Kistowski and Ahmed Ali-Eldin and Cristina L. Abad and Jos{\'e} Nelson Amaral and Petr T{\r{u}}ma and Alexandru Iosup},
   title   = {Methodological Principles for Reproducible Performance Evaluation in Cloud Computing},
   journal = {IEEE Transactions on Software Engineering},
-  year    = {2019},
+  volume  = {47},
+  number  = {8},
+  pages   = {1528--1543},
+  year    = {2021},
   doi     = {10.1109/TSE.2019.2927908}
 }
 
 @inproceedings{uta2020bigdata,
-  author    = {Alexandru Uta and others},
+  author    = {Alexandru Uta and Alexandru Custura and Dmitry Duplyakin and Ivo Jimenez and Jan Rellermeyer and Carlos Maltzahn and Robert Ricci and Alexandru Iosup},
   title     = {Is Big Data Performance Reproducible in Modern Cloud Networks?},
   booktitle = {Proc. 17th USENIX Symposium on Networked Systems Design and Implementation (NSDI)},
+  pages     = {513--527},
   year      = {2020}
 }
 
@@ -121,12 +139,15 @@
   title     = {Site Reliability Engineering: How {Google} Runs Production Systems},
   publisher = {O'Reilly Media},
   year      = {2016},
-  note      = {Chapters ``Handling Overload'' and ``Addressing Cascading Failures''}
+  note      = {Chapters~21 ``Handling Overload'' and~22 ``Addressing Cascading Failures''}
 }
 
-% check: full text not opened in the gap analysis
+% Full text read Oct 2026 (pre-press PDF, pages not yet assigned): Express.js with
+% PostgreSQL on Supabase (3-table JOIN per request) vs Redis cache-aside; JMeter,
+% 1,000/5,000/10,000 concurrent users for 60 s each; no hardware reported; no
+% correctness checks, pre-computed serving or resource cost (cost is future work).
 @article{putranto2026redis,
-  author  = {M. A. S. Putranto and A. Pinandito},
+  author  = {Muhammad Adhiyasa Satya Putranto and Aryo Pinandito},
   title   = {Analisis Kinerja Cache {Redis} pada {RESTful API} Berbasis {Express.js}},
   journal = {Jurnal Pengembangan Teknologi Informasi dan Ilmu Komputer (J-PTIIK)},
   volume  = {10},
@@ -134,10 +155,12 @@
   year    = {2026}
 }
 
-% check: full text not opened in the gap analysis
+% Full text read Oct 2026: Flask prototype in which database and cache latencies
+% are time.sleep delays (500 ms / 5 ms) and the cache is a Python dictionary;
+% Locust, 1,000 users spawned at 100/s with 1--3 s waits; KRS module.
 @article{tofan2026cacheaside,
-  author  = {Tofan and Parlika and Krispriyanto},
-  title   = {Perancangan Arsitektur Cache-Aside Menggunakan {Redis} pada Sistem Informasi Akademik},
+  author  = {Yoga Ari Tofan and Rizky Parlika and Steffanuel Pranatalie Krispriyanto},
+  title   = {Perancangan Arsitektur Cache-Aside Menggunakan {Redis} pada Sistem Informasi Akademik: Studi Prototipe dan Simulasi Beban},
   journal = {Jurnal Informatika Polinema (JIP)},
   volume  = {12},
   number  = {3},
@@ -147,38 +170,73 @@
 }
 
 @misc{pagalguy2016jee,
-  title        = {{JEE} Advanced portal to be functional soon, says chairman of {JEE} Advanced},
-  howpublished = {PaGaLGuY, \url{https://www.pagalguy.com/articles/jee-advanced-portal-to-be-functional-soon-says-chairman-of-jee-advanced-2679}},
+  author       = {Megha Mehta},
+  title        = {{JEE} Advanced portal to be functional soon, says Chairman of {JEE} Advanced},
+  howpublished = {PaGaLGuY, 12 June 2016, \url{https://www.pagalguy.com/articles/jee-advanced-portal-to-be-functional-soon-says-chairman-of-jee-advanced-2679}},
   year         = {2016}
 }
 
 @misc{ht2021ssc,
-  title        = {Maharashtra {SSC} result website crash},
-  howpublished = {Hindustan Times (Mumbai), 17 July 2021},
+  title        = {Server crash hassles scores of {SSC} students},
+  howpublished = {Hindustan Times (Mumbai), 17 July 2021, \url{https://www.pressreader.com/india/hindustan-times-st-mumbai/20210717/281513639165468}},
   year         = {2021}
 }
 
-@misc{standard2025knec,
-  title        = {{KNEC} denies website down as candidates unable to access results},
-  howpublished = {The Standard (Kenya), \url{https://thestandard.ke/business/education/article/2001509305/}},
+@misc{careerindia2021ssc,
+  author       = {Sashikanth Yechuri},
+  title        = {Varsha {Gaikwad} apologizes for {Maharashtra} results website crash},
+  howpublished = {Careerindia, 16 July 2021, \url{https://www.careerindia.com/news/varsha-gaikwad-apologizes-for-maharashtra-results-website-crash-029945.html}},
+  year         = {2021}
+}
+
+@misc{knec2025x,
+  author       = {{Kenya National Examinations Council}},
+  title        = {Statement on the 2024 {KCSE} results portal},
+  howpublished = {Post on X, 9 January 2025, \url{https://x.com/KNECKenya/status/1877322346736017641}},
+  year         = {2025}
+}
+
+@misc{k24knec2025,
+  author       = {Francis Muli},
+  title        = {`300,000 hits per second' -- {KNEC} explains why {KCSE} results portal crashed},
+  howpublished = {K24 Digital, 9 January 2025, \url{https://k24.digital/411/knec-explains-why-results-portal-crashed/}},
   year         = {2025}
 }
 
 @misc{icir2025waec,
+  author       = {Mustapha Usman},
   title        = {{WAEC} shuts down results portal, reviews 2025 {WASSCE} results},
-  howpublished = {International Centre for Investigative Reporting, \url{https://www.icirnigeria.org/waec-shuts-down-results-portal-reviews-2025-wassce-results/}},
+  howpublished = {International Centre for Investigative Reporting, 7 August 2025, \url{https://www.icirnigeria.org/waec-shuts-down-results-portal-reviews-2025-wassce-results/}},
   year         = {2025}
 }
 
 @misc{cloudflare2026wr,
+  author       = {{Cloudflare}},
   title        = {Cloudflare Waiting Room},
-  howpublished = {\url{https://www.cloudflare.com/application-services/products/waiting-room/}},
+  howpublished = {Developer documentation, \url{https://developers.cloudflare.com/waiting-room/}},
   note         = {Accessed October 2026}
 }
 
-@misc{aws2026vwr,
-  title        = {Virtual Waiting Room on {AWS}},
-  howpublished = {\url{https://docs.aws.amazon.com/solutions/latest/aws-virtual-waiting-room/welcome.html}},
+@misc{cloudflare2026queue,
+  author       = {{Cloudflare}},
+  title        = {Queueing method},
+  howpublished = {Cloudflare Waiting Room documentation, \url{https://developers.cloudflare.com/waiting-room/reference/queueing-methods/}},
+  note         = {Accessed October 2026}
+}
+
+% The AWS documentation pages for this solution returned 404 in October 2026;
+% the launch post is the stable public description.
+@misc{aws2022vwr,
+  author       = {Justin Pirtle and Joan Morgan and Jim Thario},
+  title        = {Introducing {AWS} Virtual Waiting Room},
+  howpublished = {AWS Compute Blog, 10 February 2022, \url{https://aws.amazon.com/blogs/compute/introducing-aws-virtual-waiting-room/}},
+  year         = {2022}
+}
+
+@misc{apache2026mpm,
+  author       = {{The Apache Software Foundation}},
+  title        = {Apache {MPM} common directives: {MaxRequestWorkers}},
+  howpublished = {Apache HTTP Server 2.4 documentation, \url{https://httpd.apache.org/docs/2.4/mod/mpm_common.html}},
   note         = {Accessed October 2026}
 }
 

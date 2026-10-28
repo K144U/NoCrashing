@@ -1,0 +1,15 @@
+# RQ3: waiting rooms at 5x, with refreshing students.
+name: paper-wr
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+runs:
+  - designs: [a, c1]
+    multiples: [5]
+  - designs: [d-a, d-c1]
+    multiples: [5]
+    variants:
+      - {label: fifo-token, env: {WR_POLICY: fifo, WR_MODE: token}}
+      - {label: fifo-naive, env: {WR_POLICY: fifo, WR_MODE: naive}}
+      - {label: random-token, env: {WR_POLICY: random, WR_MODE: token}}
+      - {label: random-naive, env: {WR_POLICY: random, WR_MODE: naive}}

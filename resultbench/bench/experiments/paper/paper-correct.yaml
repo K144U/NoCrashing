@@ -1,0 +1,24 @@
+# RQ4: correctness. Corrections 30 s after release; early release.
+name: paper-correct
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+set: {corrections.enabled: true, corrections.at_s: 30}
+runs:
+  - designs: [a, c1]
+    multiples: [1]
+  - designs: [b0]
+    multiples: [1]
+    variants:
+      - {label: invalidate}
+      - {label: no-invalidate, options: {invalidate: false}}
+  - designs: [c2]
+    multiples: [1]
+    variants:
+      - {label: ofc-30s, env: {NGINX_OFC_VALID: 30s}}
+      - {label: ofc-1s, env: {NGINX_OFC_VALID: 1s}}
+  - designs: [c1, c2]
+    multiples: [1]
+    set: {corrections.enabled: false}
+    variants:
+      - {label: early-90, options: {fraction: 0.9}}

@@ -1,0 +1,24 @@
+# Refresh paper P8 (second round, pre-registered 12 Nov 2026): is the collapse
+# metastable? Impatient students (patience 3-8 s, pause 0.5-2 s) with one
+# refresh probability p for errors and time-outs. Arrivals either surge to 2x
+# and decay (tau 30 s) to a steady 0.5x, or hold 0.5x from release; both last
+# 300 s after release, and runs end 45 s later. Derivation condition (8):
+# p = 0.95 is metastable, p = 0.5 is not.
+# Same CPU pinning as the P grids: RB_SUT_CPUSET=2,3 RB_LOADGEN_CPUSET=4-15.
+name: p8-metastable
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+runs:
+  - designs: [a]
+    multiples: [2]
+    set: {users.patience_s: [3, 8], users.retry_delay_s: [0.5, 2], surge.floor_frac: 0.25, surge.post_release_s: 300}
+    variants:
+      - {label: p0.5-surge, set: {users.retry_prob: 0.5, users.impatient_retry_prob: 0.5}}
+      - {label: p0.95-surge, set: {users.retry_prob: 0.95, users.impatient_retry_prob: 0.95}}
+  - designs: [a]
+    multiples: [0.5]
+    set: {users.patience_s: [3, 8], users.retry_delay_s: [0.5, 2], surge.floor_frac: 1.0, surge.post_release_s: 300}
+    variants:
+      - {label: p0.5-steady, set: {users.retry_prob: 0.5, users.impatient_retry_prob: 0.5}}
+      - {label: p0.95-steady, set: {users.retry_prob: 0.95, users.impatient_retry_prob: 0.95}}

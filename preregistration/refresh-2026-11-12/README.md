@@ -29,3 +29,20 @@ The model and its inputs are described in `predictions.md`. The experiments
 will be run on the same machine as the ResultBench runs the CPU costs were
 measured on. The results, including every prediction that fails, will be
 reported against these files.
+
+## Second round (frozen 11:12 UTC, 12 November 2026)
+
+`round2/` holds predictions made after the first round's results were known
+(166 of 176 numbers held) and before any of the runs that test them:
+
+| File | What it is |
+|---|---|
+| `round2/predictions2.md` | P8 (is the collapse metastable?) and P5c (the waiting room's own capacity), with the rules for judging them |
+| `round2/predictions2-tables.md`, `round2/predictions2.csv` | Every predicted number |
+| `round2/make_predictions2.py` | The script that produced them (it imports `make_predictions.py` above) |
+| `round2/grids/` | The experiment grids, as run |
+| `round2/FROZEN2.txt` | SHA-256 fingerprints taken at freezing time |
+
+The model code is unchanged: `model/capacity.py` has the same fingerprint in
+`FROZEN.txt` and `round2/FROZEN2.txt`. `round2/grids/x1-cancel-trace.yaml`
+is an exploratory measurement with no prediction.

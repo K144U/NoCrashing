@@ -1,0 +1,15 @@
+# Refresh paper P5c (pre-registered as a measurement on 12 Nov 2026; number
+# frozen in the second round): the waiting room's own capacity. Design D-A at
+# 5x with token tickets, admitting 1 student per second, so the room answers
+# almost only queued students' polls. Measured over the seconds its 0.25 CPU
+# is saturated (model.capacity._room_busy).
+# Same CPU pinning as the P grids: RB_SUT_CPUSET=2,3 RB_LOADGEN_CPUSET=4-15.
+name: p5c-room-capacity
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+runs:
+  - designs: [d-a]
+    multiples: [5]
+    variants:
+      - {label: admit-1, env: {WR_POLICY: fifo, WR_MODE: token, WR_ADMIT_RATE: "1"}}

@@ -1,0 +1,17 @@
+# Refresh paper, after the freeze (exploratory, 12 Nov 2026): why does
+# stopping the work leave 13% of answers unread for impatient students (P6)?
+# Same settings as p6-cancel "impatient-cancel", with every 10th request
+# traced, so the time from a student leaving to the server noticing can be
+# measured (trace client_gone_us against the generator's send time + patience).
+# Same CPU pinning as the P grids: RB_SUT_CPUSET=2,3 RB_LOADGEN_CPUSET=4-15.
+name: x1-cancel-trace
+scenario: bench/scenarios/paper.yaml
+capacity_from: a
+reps: 3
+runs:
+  - designs: [a]
+    multiples: [2]
+    set: {users.retry_prob: 0.9, users.impatient_retry_prob: 0.95, users.patience_s: [3, 8], users.retry_delay_s: [0.5, 2]}
+    env: {TRACE_EVERY: "10"}
+    variants:
+      - {label: impatient-cancel, env: {CANCEL_ON_DISCONNECT: "true"}}

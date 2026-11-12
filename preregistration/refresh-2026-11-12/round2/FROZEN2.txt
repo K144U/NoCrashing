@@ -1,0 +1,11 @@
+Second-round predictions frozen before any P8 or P5c run.
+2026-11-12T11:12:01Z
+4b59c18abc826bdc119128395387e776ea7b06b342dc7175191cfb60d638e5f6  predictions2.md
+bde01d006bccc18fbd00a8e749d8562596c76b205c4590006a8f197e1ec7ef81  predictions2-tables.md
+55faf2f1be689b2501356c4b7713d432b32cb0ef33d8e88a7745c7deccff3e0e  predictions2.csv
+b24b0cfc246941575a368bc8081fc22d83fc9f9b04050d6a70cd0cb5c43a3ada  make_predictions2.py
+ffe448500518565cd27b395d5e50040c59433147e95d96002a324c5c0b7c4eba  ../resultbench/model/capacity.py
+71b67b7ce73518d8a1e76868be594a44b8a9d89479746482c8648b4262a84520  ../resultbench/bench/experiments/refresh/p8-metastable.yaml
+414d61cf67660ecce19a3d37d26f2cc96e5452e0ae5eb8402a3eccfeb1be7d4e  ../resultbench/bench/experiments/refresh/p5c-room-capacity.yaml
+
+capacity.py is byte-identical to the first round's (FROZEN.txt) if the hashes match.

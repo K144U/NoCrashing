@@ -1,0 +1,10 @@
+Predictions frozen before any P2-P7 run.
+2026-11-12T04:27:06Z
+453a0ff2549edc91ef6c3a4c9139b8968dec5c4aaa5502a295aa5db5f232ba02  predictions.md
+44ccc2b084878ab2949b62bf5fef20bf4b1b83d6a9813a173e4cd2264de7596d  predictions.csv
+9937c82e5cdce0c21be314f69fc70bcc7218cba5e51329b209e65c1db0979841  predictions-tables.md
+eb4b295a56f6a74c9cd30a2e4402d5007589e57177958e8b3d8ae5a9f005fa31  make_predictions.py
+ffe448500518565cd27b395d5e50040c59433147e95d96002a324c5c0b7c4eba  ../resultbench/model/capacity.py
+0e04f2ba4d373ce17161cf8cc0043bac489223edb4c6b7421e5c135b146a2189  ../resultbench/model/des.py
+
+2026-11-12T04:40:51Z: make_predictions.py changed only to write paper/generated/numbers.tex; rerun gives identical predictions.md, predictions.csv and predictions-tables.md (hashes above unchanged).
